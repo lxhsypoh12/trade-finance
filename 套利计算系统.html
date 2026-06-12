@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>贸易公司套利利润计算系统</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f0f4f8;
+    color: #1a202c;
+    min-height: 100vh;
+  }
+
+  /* ===== 通用页头 ===== */
+  .header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 50%, #3182ce 100%);
+    color: #fff;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    position: relative;
+  }
+  .header .back-link {
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 4px;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .header .back-link:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  .header .header-text { flex: 1; text-align: center; }
+  .header h1 { font-size: 20px; font-weight: 600; letter-spacing: 0.5px; }
+  .header p  { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+
+  /* ===== 主页 ===== */
+  .home-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 200px);
+    padding: 40px 24px;
+  }
+  .home-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .home-subtitle {
+    font-size: 14px;
+    color: #718096;
+    margin-bottom: 40px;
+    text-align: center;
+  }
+  .home-cards {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .home-card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    padding: 40px 36px;
+    width: 320px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-top: 5px solid transparent;
+  }
+  .home-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.14);
+  }
+  .home-card.card-bill  { border-top-color: #3182ce; }
+  .home-card.card-lc    { border-top-color: #38a169; }
+  .home-card.card-quote { border-top-color: #805ad5; }
+  .home-card .icon { font-size: 48px; margin-bottom: 16px; }
+  .home-card h2 { font-size: 18px; color: #2d3748; margin-bottom: 8px; }
+  .home-card p  { font-size: 13px; color: #718096; line-height: 1.6; }
+
+  /* ===== 计算器容器 ===== */
+  .calc-container {
+    display: flex;
+    gap: 24px;
+    max-width: 1240px;
+    margin: 20px auto 16px;
+    padding: 0 24px;
+    align-items: flex-start;
+  }
+
+  /* ===== 左栏 ===== */
+  .panel-left {
+    flex: 0 0 355px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    padding: 22px 20px;
+    position: sticky;
+    top: 20px;
+  }
+  .panel-left h2 {
+    font-size: 15px;
+    color: #2c5282;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .form-group {
+    margin-bottom: 14px;
+  }
+  .form-group label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 3px;
+  }
+  .form-group label .unit {
+    font-weight: 400;
+    font-size: 11px;
+    color: #a0aec0;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 8px 11px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: "SF Mono", "Consolas", "Menlo", monospace;
+    color: #2d3748;
+    background: #f7fafc;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  .form-group input:focus {
+    border-color: #3182ce;
+    box-shadow: 0 0 0 3px rgba(49,130,206,0.12);
+    background: #fff;
+  }
+  .form-group input.invalid {
+    border-color: #e53e3e;
+    box-shadow: 0 0 0 3px rgba(229,62,62,0.10);
+  }
+  .form-group select {
+    width: 100%;
+    padding: 8px 11px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #2d3748;
+    background: #f7fafc;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23718096' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+  }
+  .form-group select:focus {
+    border-color: #3182ce;
+    box-shadow: 0 0 0 3px rgba(49,130,206,0.12);
+    background: #fff;
+  }
+  .form-group select.invalid {
+    border-color: #e53e3e;
+    box-shadow: 0 0 0 3px rgba(229,62,62,0.10);
+  }
+  .form-group .hint {
+    font-size: 10px;
+    color: #a0aec0;
+    margin-top: 1px;
+    min-height: 15px;
+  }
+  .form-group .hint.error { color: #e53e3e; }
+
+  /* 条件显示组 */
+  .cond-group { display: none; }
+  .cond-group.active { display: block; }
+
+  /* 卡片颜色 - 报价计算器 */
+  .card-cost      { border-left-color: #3182ce; }
+  .card-taxdetail { border-left-color: #dd6b20; }
+  .card-quoteprice { border-left-color: #38a169; }
+
+  /* ===== 右栏 ===== */
+  .panel-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    padding: 18px 22px;
+    border-left: 4px solid transparent;
+    transition: border-color 0.3s;
+  }
+  .card .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .card .formula {
+    font-family: "SF Mono", "Consolas", "Menlo", monospace;
+    font-size: 12px;
+    color: #718096;
+    background: #f7fafc;
+    padding: 5px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 5px;
+  }
+  .card .steps {
+    font-size: 12px;
+    color: #4a5568;
+    line-height: 1.8;
+  }
+  .card .result {
+    font-size: 17px;
+    font-weight: 700;
+    margin-top: 6px;
+  }
+  .card .result.positive { color: #38a169; }
+  .card .result.negative { color: #e53e3e; }
+  .card .sub-result {
+    font-size: 12px;
+    color: #718096;
+    margin-top: 2px;
+  }
+
+  .card-confirm   { border-left-color: #a0aec0; }
+  .card-deposit   { border-left-color: #3182ce; }
+  .card-discount  { border-left-color: #dd6b20; }
+  .card-fees      { border-left-color: #805ad5; }
+  .card-bridge    { border-left-color: #d53f8c; }
+  .card-opex      { border-left-color: #00a3c4; }
+  .card-subsidy   { border-left-color: #38a169; }
+  .card-deferred  { border-left-color: #2b6cb0; }
+  .card-profit    { border-left-color: transparent; }
+  .card-profit.profit-positive { border-left-color: #38a169; background: #f0fff4; }
+  .card-profit.profit-negative { border-left-color: #e53e3e; background: #fff5f5; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 11px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-profit { background: #c6f6d5; color: #276749; }
+  .badge-loss   { background: #fed7d7; color: #9b2c2c; }
+
+  .divider {
+    border: none;
+    border-top: 1px dashed #e2e8f0;
+    margin: 8px 0;
+  }
+
+  /* PDF按钮 */
+  .pdf-bar {
+    max-width: 1240px;
+    margin: 0 auto 24px;
+    padding: 0 24px;
+    text-align: right;
+  }
+  .btn-pdf {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 22px;
+    background: #2c5282;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: inherit;
+  }
+  .btn-pdf:hover { background: #1e3a5f; }
+
+  @media (max-width: 880px) {
+    .calc-container { flex-direction: column; padding: 0 12px; }
+    .panel-left { flex: none; position: static; }
+    .home-cards { flex-direction: column; align-items: center; }
+    .header h1 { font-size: 17px; }
+  }
+
+  /* ===== 打印样式 ===== */
+  @media print {
+    body { background: #fff; }
+    .header, .panel-left, .pdf-bar, .back-link { display: none !important; }
+    .calc-container { display: block; max-width: 100%; margin: 0; padding: 0; }
+    .panel-right { gap: 8px; }
+    .card {
+      box-shadow: none;
+      border-radius: 4px;
+      padding: 10px 16px;
+      page-break-inside: avoid;
+      border-left-width: 3px;
+    }
+    .card .card-title { font-size: 13px; }
+    .card .result { font-size: 15px; }
+    @page { size: A4; margin: 12mm; }
+  }
+
+  /* ===== 业务统计系统 ===== */
+  .home-section-divider {
+    width: 80%;
+    max-width: 900px;
+    margin: 10px auto 0;
+    border: none;
+    border-top: 2px solid #e2e8f0;
+  }
+  .home-section-title {
+    text-align: center;
+    font-size: 16px;
+    color: #4a5568;
+    margin: 28px 0 18px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .home-card.card-stats-bid  { border-top-color: #e53e3e; }
+  .home-card.card-stats-win  { border-top-color: #dd6b20; }
+  .home-card.card-stats-done { border-top-color: #38a169; }
+
+  /* 统计表格容器 */
+  .stats-container {
+    max-width: 1340px;
+    margin: 20px auto 16px;
+    padding: 0 24px;
+  }
+  .stats-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .stats-toolbar .btn-add {
+    padding: 8px 20px;
+    background: #2c5282;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: inherit;
+  }
+  .stats-toolbar .btn-add:hover { background: #1e3a5f; }
+  .stats-table-wrapper {
+    overflow-x: auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  }
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 1100px;
+  }
+  .stats-table thead th {
+    background: #1e3a5f;
+    color: #fff;
+    padding: 10px 6px;
+    text-align: center;
+    font-weight: 600;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  .stats-table thead th.col-cb { width: 40px; }
+  .stats-table tbody td {
+    padding: 5px 6px;
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+  }
+  .stats-table tbody tr:nth-child(even) { background: #f7fafc; }
+  .stats-table tbody tr:nth-child(odd)  { background: #fff; }
+  .stats-table tbody tr:hover { background: #ebf4ff; }
+  .stats-table input[type="text"],
+  .stats-table input[type="number"] {
+    width: 100%;
+    min-width: 60px;
+    padding: 5px 6px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 12px;
+    text-align: center;
+    font-family: inherit;
+    background: #fff;
+    transition: border-color 0.2s;
+  }
+  .stats-table input[type="text"]:focus,
+  .stats-table input[type="number"]:focus {
+    border-color: #3182ce;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(49,130,206,0.12);
+  }
+  .stats-table .readonly-field {
+    background: #edf2f7;
+    color: #4a5568;
+    padding: 5px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: block;
+  }
+  .stats-table .formula-field {
+    background: #f0fff4;
+    color: #276749;
+    padding: 5px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    display: block;
+  }
+  /* 操作栏 */
+  .stats-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 16px 24px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    margin-top: 12px;
+  }
+  .btn-danger {
+    padding: 10px 24px;
+    background: #e53e3e;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: inherit;
+  }
+  .btn-danger:hover { background: #c53030; }
+  .btn-success {
+    padding: 10px 24px;
+    background: #38a169;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: inherit;
+  }
+  .btn-success:hover { background: #2f855a; }
+  .btn-primary {
+    padding: 10px 24px;
+    background: #3182ce;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: inherit;
+  }
+  .btn-primary:hover { background: #2b6cb0; }
+  /* 汇总行 */
+  .stats-summary {
+    display: flex;
+    justify-content: flex-end;
+    padding: 14px 24px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    margin-top: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+  .stats-summary .total-profit {
+    background: #f0fff4;
+    border: 2px solid #38a169;
+    padding: 10px 24px;
+    border-radius: 8px;
+    color: #276749;
+    font-size: 18px;
+  }
+  .stats-table input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #3182ce;
+  }
+  .empty-hint {
+    text-align: center;
+    color: #a0aec0;
+    padding: 40px !important;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== 视图1：主页 ==================== -->
+<div id="view-home">
+  <div style="text-align:center; padding: 30px 0 0;">
+    <h1 style="font-size:24px; color:#1e3a5f;">📊 贸易公司套利利润计算系统</h1>
+    <p style="color:#718096; font-size:13px; margin-top:4px;">请选择计算通道</p>
+  </div>
+  <div class="home-container">
+    <div class="home-cards">
+      <div class="home-card card-bill" onclick="showView('bill')">
+        <div class="icon">🏦</div>
+        <h2>银行承兑汇票套利</h2>
+        <p>定期存款质押 → 银行承兑汇票 → 贴现套利<br>含拆借成本、城投补贴、后置利息</p>
+      </div>
+      <div class="home-card card-lc" onclick="showView('lc')">
+        <div class="icon">🌐</div>
+        <h2>信用证套利</h2>
+        <p>定期存款质押 → 银行信用证 → 议付套利<br>含拆借成本、城投补贴、后置利息</p>
+      </div>
+      <div class="home-card card-quote" onclick="showView('quote')">
+        <div class="icon">🧮</div>
+        <h2>贸易金融业务报价</h2>
+        <p>根据业务成本 + 付费方式 + 税务<br>反向计算对外最低报价</p>
+      </div>
+    </div>
+  </div>
+
+  <hr class="home-section-divider">
+  <div class="home-section-title">📋 业务统计</div>
+  <div class="home-container" style="min-height:auto; padding-top:0;">
+    <div class="home-cards">
+      <div class="home-card card-stats-bid" onclick="showView('stats-bid')">
+        <div class="icon">📝</div>
+        <h2>投标阶段业务统计表</h2>
+        <p>记录业务基本要素 · 寻找合作方<br>中标迁移 / 未中标删除</p>
+      </div>
+      <div class="home-card card-stats-win" onclick="showView('stats-win')">
+        <div class="icon">🏆</div>
+        <h2>中标阶段业务统计表</h2>
+        <p>跟踪中标业务 · 记录贸易合作方<br>服务完成迁移至完成阶段</p>
+      </div>
+      <div class="home-card card-stats-done" onclick="showView('stats-done')">
+        <div class="icon">✅</div>
+        <h2>完成阶段业务统计表</h2>
+        <p>实际收入/成本/利润核算<br>公司总利润汇总</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 视图2/3：计算器（共享） ==================== -->
+<div id="view-calc" style="display:none;">
+
+  <!-- 页头 -->
+  <div class="header">
+    <span class="back-link" onclick="showView('home')">← 返回主页</span>
+    <div class="header-text">
+      <h1 id="calc-title">📊 票据套利利润计算器</h1>
+      <p id="calc-subtitle">定期存款质押 → 银行承兑汇票 → 贴现套利 · 自动化利润核算</p>
+    </div>
+  </div>
+
+  <!-- 计算器主体 -->
+  <div class="calc-container">
+
+    <!-- 左栏：输入区 -->
+    <div class="panel-left">
+      <h2>⚙️ 参数输入 <span style="font-weight:400;font-size:11px;color:#a0aec0;" id="calc-badge">银行承兑汇票</span></h2>
+
+      <div class="form-group">
+        <label>票面金额 <span class="unit">万元</span></label>
+        <input type="number" id="X" value="0" min="0.01" step="0.01" placeholder="如 100">
+        <div class="hint" id="hint-X"></div>
+      </div>
+      <div class="form-group">
+        <label>存款/票期 <span class="unit">年</span></label>
+        <input type="number" id="Y" value="0" min="0.01" step="0.01" placeholder="如 1">
+        <div class="hint" id="hint-Y"></div>
+      </div>
+      <div class="form-group">
+        <label>定期存款年利率 <span class="unit">%</span></label>
+        <input type="number" id="i" value="0" min="0" step="0.01" placeholder="如 3.5">
+        <div class="hint" id="hint-i"></div>
+      </div>
+      <div class="form-group">
+        <label id="lbl-j">贴现年化利率 <span class="unit">%</span></label>
+        <input type="number" id="j" value="0" min="0" step="0.01" placeholder="如 2.8">
+        <div class="hint" id="hint-j"></div>
+      </div>
+
+      <div class="form-group" style="border-top:1px dashed #e2e8f0; padding-top:14px; margin-top:2px;">
+        <label id="lbl-F1">开票手续费 <span class="unit">元</span></label>
+        <input type="number" id="F1" value="0" min="0" step="0.01" placeholder="如 5000">
+        <div class="hint" id="hint-F1"></div>
+      </div>
+      <div class="form-group">
+        <label id="lbl-F2">贴现手续费 <span class="unit">元</span></label>
+        <input type="number" id="F2" value="0" min="0" step="0.01" placeholder="如 3000">
+        <div class="hint" id="hint-F2"></div>
+      </div>
+
+      <div class="form-group" style="border-top:1px dashed #e2e8f0; padding-top:14px; margin-top:2px;">
+        <label>拆借资金日利率 <span class="unit">%/天</span></label>
+        <input type="number" id="r" value="0.1" min="0" step="0.001" placeholder="如 0.1">
+        <div class="hint" id="hint-r">存款本金实际来自拆借，按天计息</div>
+      </div>
+      <div class="form-group">
+        <label id="lbl-z">开票至贴现天数 <span class="unit">天</span></label>
+        <input type="number" id="z" value="1" min="0" step="1" placeholder="如 30">
+        <div class="hint" id="hint-z">从开票到贴现完成还款的自然天数</div>
+      </div>
+      <div class="form-group" style="border-top:1px dashed #e2e8f0; padding-top:14px; margin-top:2px;">
+        <label>公司运营成本率 <span class="unit">%</span></label>
+        <input type="number" id="a" value="0.3" min="0" step="0.01" placeholder="如 0.3">
+        <div class="hint" id="hint-a">含税费，按开票金额比例核定</div>
+      </div>
+
+      <div class="form-group" style="border-top:1px dashed #e2e8f0; padding-top:14px; margin-top:2px;">
+        <label>城投补贴费率 <span class="unit">%</span></label>
+        <input type="number" id="Z" value="0" min="0" step="0.01" placeholder="如 0.5">
+        <div class="hint" id="hint-Z">城投公司指定存款银行而支付的补贴</div>
+      </div>
+      <div class="form-group">
+        <label>后置利息率 <span class="unit">%</span></label>
+        <input type="number" id="H" value="15" min="0" step="0.01" placeholder="如 15">
+        <div class="hint" id="hint-H">存款利息到期后付，城投公司补偿的后置收入</div>
+      </div>
+    </div>
+
+    <!-- 右栏：计算明细 -->
+    <div class="panel-right">
+
+      <div class="card card-confirm" id="card-confirm">
+        <div class="card-title">📋 输入确认</div>
+        <div class="steps" id="confirm-content">—</div>
+      </div>
+
+      <div class="card card-deposit" id="card-deposit">
+        <div class="card-title">💰 存款利息</div>
+        <div class="formula">存款利息 = 票面金额 × 10000 × (存款利率 ÷ 100) × 存款期限</div>
+        <div class="steps" id="deposit-steps">—</div>
+        <div class="result positive" id="deposit-result">—</div>
+      </div>
+
+      <div class="card card-discount" id="card-discount">
+        <div class="card-title" id="card3-title">📉 贴现成本</div>
+        <div class="formula" id="card3-formula">贴现利息 = 票面金额 × 10000 × (贴现利率 ÷ 100) × 存款期限</div>
+        <div class="steps" id="discount-steps">—</div>
+        <div class="result negative" id="discount-result">—</div>
+        <hr class="divider">
+        <div class="steps" id="spread-text">价差 = 存款利息 − 贴现利息 = —</div>
+        <div class="result" id="spread-result">—</div>
+      </div>
+
+      <div class="card card-fees" id="card-fees">
+        <div class="card-title">🧾 银行手续费</div>
+        <div class="steps" id="fees-steps">—</div>
+        <div class="result negative" id="fees-result">—</div>
+      </div>
+
+      <div class="card card-bridge" id="card-bridge">
+        <div class="card-title">🏦 拆借资金成本</div>
+        <div class="formula" id="card5-formula">拆借利息 = 票面金额 × 10000 × (拆借日利率 ÷ 100) × 贴现天数</div>
+        <div class="steps" id="bridge-steps">—</div>
+        <div class="result negative" id="bridge-result">—</div>
+      </div>
+
+      <div class="card card-opex" id="card-opex">
+        <div class="card-title">🏢 公司运营成本（含税）</div>
+        <div class="formula">运营成本 = 票面金额 × 10000 × (运营成本率 ÷ 100)</div>
+        <div class="steps" id="opex-steps">—</div>
+        <div class="result negative" id="opex-result">—</div>
+      </div>
+
+      <div class="card card-subsidy" id="card-subsidy">
+        <div class="card-title">🏛️ 城投公司补贴收入</div>
+        <div class="formula">补贴收入 = 票面金额 × 10000 × (补贴费率 ÷ 100) × 存款期限</div>
+        <div class="steps" id="subsidy-steps">—</div>
+        <div class="result positive" id="subsidy-result">—</div>
+      </div>
+
+      <div class="card card-deferred" id="card-deferred">
+        <div class="card-title">⏳ 后置利息收入</div>
+        <div class="formula">后置利息 = 存款利息 × (后置利息率 ÷ 100) × 存款期限</div>
+        <div class="steps" id="deferred-steps">—</div>
+        <div class="result positive" id="deferred-result">—</div>
+      </div>
+
+      <div class="card card-profit" id="card-profit">
+        <div class="card-title">📊 净利润</div>
+        <div class="formula">净利润 = 价差 − 手续费 − 拆借成本 − 运营成本 + 补贴收入 + 后置利息</div>
+        <div class="steps" id="profit-steps">—</div>
+        <div class="result" id="profit-result">—</div>
+        <div class="sub-result" id="profit-annual">—</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PDF导出按钮 -->
+  <div class="pdf-bar">
+    <button class="btn-pdf" onclick="exportPDF()">📥 导出PDF</button>
+  </div>
+</div>
+
+<!-- ==================== 视图4：贸易金融业务报价计算器 ==================== -->
+<div id="view-quote" style="display:none;">
+
+  <div class="header">
+    <span class="back-link" onclick="showView('home')">← 返回主页</span>
+    <div class="header-text">
+      <h1>🧮 贸易金融业务报价计算器</h1>
+      <p>根据业务成本 + 付费方式 + 税务 → 反向计算对外最低报价</p>
+    </div>
+  </div>
+
+  <div class="calc-container">
+
+    <!-- 左栏：输入区 -->
+    <div class="panel-left">
+      <h2>⚙️ 参数输入</h2>
+
+      <!-- 基础参数 -->
+      <div class="form-group">
+        <label>业务类型</label>
+        <select id="quote-type">
+          <option value="">选择类型</option>
+          <option value="银承-回报">银承-回报</option>
+          <option value="银承-供应链">银承-供应链</option>
+          <option value="信用证-回报">信用证-回报</option>
+          <option value="信用证-供应链">信用证-供应链</option>
+          <option value="跑量/受托支付">跑量/受托支付</option>
+          <option value="存款">存款</option>
+          <option value="时点">时点</option>
+        </select>
+        <div class="hint" id="hint-quote-type"></div>
+      </div>
+      <div class="form-group">
+        <label>业务金额 <span class="unit">万元</span></label>
+        <input type="number" id="quote-amount" value="0" min="0.01" step="0.01" placeholder="如 500">
+        <div class="hint" id="hint-quote-amount"></div>
+      </div>
+      <div class="form-group">
+        <label>贸易业务成本费率 <span class="unit">%</span></label>
+        <input type="number" id="quote-cost-rate" value="0" min="0" step="0.01" placeholder="如 2.5">
+        <div class="hint" id="hint-quote-cost-rate"></div>
+      </div>
+
+      <!-- 付费与利润 -->
+      <div class="form-group" style="border-top:1px dashed #e2e8f0; padding-top:14px; margin-top:2px;">
+        <label>成本付费方式</label>
+        <select id="quote-pay-type">
+          <option value="">选择付费方式</option>
+          <option value="private">对私</option>
+          <option value="corp">对公</option>
+        </select>
+        <div class="hint" id="hint-quote-pay-type"></div>
+      </div>
+      <div class="form-group">
+        <label>目标利润率 <span class="unit">%</span></label>
+        <input type="number" id="quote-profit-rate" value="10" min="0" step="0.01" placeholder="如 10">
+        <div class="hint" id="hint-quote-profit-rate"></div>
+      </div>
+
+      <!-- 条件显示：对私 -->
+      <div class="cond-group" id="cond-private" style="border-top:1px dashed #e2e8f0; padding-top:14px; margin-top:2px;">
+        <div class="form-group">
+          <label>对私税筹费率 <span class="unit">%</span></label>
+          <input type="number" id="quote-private-rate" value="14" min="0" step="0.01" placeholder="如 14">
+          <div class="hint" id="hint-quote-private-rate">对私付费方式下的税务筹划综合费率</div>
+        </div>
+      </div>
+
+      <!-- 条件显示：对公 -->
+      <div class="cond-group" id="cond-corp" style="border-top:1px dashed #e2e8f0; padding-top:14px; margin-top:2px;">
+        <div class="form-group">
+          <label>对公开票费率 <span class="unit">%</span></label>
+          <input type="number" id="quote-corp-rate" value="7" min="0" step="0.01" placeholder="如 7">
+          <div class="hint" id="hint-quote-corp-rate">对公付费方式下的开票综合费率</div>
+        </div>
+        <div class="form-group">
+          <label>增值税率（咨询费） <span class="unit">%</span></label>
+          <input type="number" id="quote-vat-rate" value="6" min="0" step="0.01" placeholder="如 6">
+          <div class="hint" id="hint-quote-vat-rate">一般纳税人咨询服务增值税率 6%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右栏：计算明细 -->
+    <div class="panel-right">
+
+      <div class="card card-confirm" id="card-quote-confirm">
+        <div class="card-title">📋 输入确认</div>
+        <div class="steps" id="quote-confirm-content">—</div>
+      </div>
+
+      <div class="card card-cost" id="card-quote-cost">
+        <div class="card-title">📦 贸易业务成本</div>
+        <div class="formula">成本金额 = 业务金额 × 10000 × (成本费率 ÷ 100)</div>
+        <div class="steps" id="quote-cost-steps">—</div>
+        <div class="result negative" id="quote-cost-result">—</div>
+      </div>
+
+      <div class="card card-taxdetail" id="card-quote-tax">
+        <div class="card-title">🧾 税费明细</div>
+        <div class="steps" id="quote-tax-steps">—</div>
+        <div class="result negative" id="quote-tax-result">—</div>
+      </div>
+
+      <div class="card card-quoteprice" id="card-quote-price">
+        <div class="card-title">💰 对外报价</div>
+        <div class="formula">报价金额 = (成本金额 + 税费) ÷ (1 − 目标利润率 ÷ 100)</div>
+        <div class="steps" id="quote-price-steps">—</div>
+        <div class="result positive" id="quote-price-result">—</div>
+      </div>
+
+      <div class="card card-profit" id="card-quote-profit">
+        <div class="card-title">📊 公司利润</div>
+        <div class="formula">公司利润 = 报价金额 × (目标利润率 ÷ 100)</div>
+        <div class="steps" id="quote-profit-steps">—</div>
+        <div class="result" id="quote-profit-result">—</div>
+        <div class="sub-result" id="quote-profit-rate-display">—</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PDF导出按钮 -->
+  <div class="pdf-bar">
+    <button class="btn-pdf" onclick="exportQuotePDF()">📥 导出PDF</button>
+  </div>
+</div>
+
+<!-- ==================== 视图5：投标阶段业务统计表 ==================== -->
+<div id="view-stats-bid" style="display:none;">
+  <div class="header">
+    <span class="back-link" onclick="showView('home')">← 返回主页</span>
+    <div class="header-text">
+      <h1>📝 投标阶段业务统计表</h1>
+      <p>记录业务基本要素 · 寻找合作方 · 完成报价</p>
+    </div>
+  </div>
+  <div class="stats-container">
+    <div class="stats-toolbar">
+      <span style="color:#718096;font-size:13px;">共 <b id="bid-count">0</b> 条记录</span>
+      <button class="btn-add" onclick="statsAddBid()">＋ 添加记录</button>
+    </div>
+    <div class="stats-table-wrapper">
+      <table class="stats-table" id="bid-table">
+        <thead>
+          <tr>
+            <th class="col-cb"><input type="checkbox" id="bid-check-all" onchange="statsToggleAll('bid')" title="全选/取消全选"></th>
+            <th>区域</th>
+            <th>城投公司</th>
+            <th>金融机构</th>
+            <th>业务规模<br>(万元)</th>
+            <th>业务类型</th>
+            <th>时间<br>(年/月)</th>
+            <th>负责人</th>
+          </tr>
+        </thead>
+        <tbody id="bid-tbody"></tbody>
+      </table>
+    </div>
+    <div class="stats-actions">
+      <button class="btn-danger" onclick="statsBatchDelete('bid')">🗑 未中标（删除选中）</button>
+      <button class="btn-success" onclick="statsMigrateBidToWin()">🏆 中标（迁移选中至中标阶段）</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 视图6：中标阶段业务统计表 ==================== -->
+<div id="view-stats-win" style="display:none;">
+  <div class="header">
+    <span class="back-link" onclick="showView('home')">← 返回主页</span>
+    <div class="header-text">
+      <h1>🏆 中标阶段业务统计表</h1>
+      <p>跟踪中标业务 · 记录贸易合作方 · 服务完成情况</p>
+    </div>
+  </div>
+  <div class="stats-container">
+    <div class="stats-toolbar">
+      <span style="color:#718096;font-size:13px;">共 <b id="win-count">0</b> 条记录</span>
+      <span style="color:#a0aec0;font-size:12px;">基础字段从投标阶段迁移（只读），其余手动填写</span>
+    </div>
+    <div class="stats-table-wrapper">
+      <table class="stats-table" id="win-table">
+        <thead>
+          <tr>
+            <th class="col-cb"><input type="checkbox" id="win-check-all" onchange="statsToggleAll('win')" title="全选/取消全选"></th>
+            <th>区域</th>
+            <th>城投公司</th>
+            <th>金融机构</th>
+            <th>业务规模<br>(万元)</th>
+            <th>业务类型</th>
+            <th>时间<br>(年/月)</th>
+            <th>负责人</th>
+            <th>贸易方</th>
+            <th>贸易成本<br>(万元)</th>
+            <th>中标费率<br>(%)</th>
+            <th>中标金额<br>(万元)</th>
+            <th>预计公司利润<br>(万元)</th>
+          </tr>
+        </thead>
+        <tbody id="win-tbody"></tbody>
+      </table>
+    </div>
+    <div class="stats-actions">
+      <button class="btn-primary" onclick="statsMigrateWinToDone()">✅ 服务完成（迁移选中至完成阶段）</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 视图7：完成阶段业务统计表 ==================== -->
+<div id="view-stats-done" style="display:none;">
+  <div class="header">
+    <span class="back-link" onclick="showView('home')">← 返回主页</span>
+    <div class="header-text">
+      <h1>✅ 完成阶段业务统计表</h1>
+      <p>实际收入 / 成本 / 利润核算 · 板块利润汇总</p>
+    </div>
+  </div>
+  <div class="stats-container">
+    <div class="stats-toolbar">
+      <span style="color:#718096;font-size:13px;">共 <b id="done-count">0</b> 条记录</span>
+      <span style="color:#a0aec0;font-size:12px;">基础字段从中标阶段迁移（只读），实付/实收手动填写</span>
+    </div>
+    <div class="stats-table-wrapper">
+      <table class="stats-table" id="done-table">
+        <thead>
+          <tr>
+            <th>区域</th>
+            <th>城投公司</th>
+            <th>金融机构</th>
+            <th>业务规模<br>(万元)</th>
+            <th>业务类型</th>
+            <th>时间<br>(年/月)</th>
+            <th>负责人</th>
+            <th>实付成本<br>(万元)</th>
+            <th>实收金额<br>(万元)</th>
+            <th>实际利润<br>(万元)</th>
+          </tr>
+        </thead>
+        <tbody id="done-tbody"></tbody>
+      </table>
+    </div>
+    <div class="stats-summary">
+      <span class="total-profit">📊 公司总利润：<b id="total-profit">0.00</b> 万元</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ═══════════════════════════════════════
+  // 术语映射表
+  // ═══════════════════════════════════════
+  const LABELS = {
+    bill: {
+      type: 'bill',
+      title: '📊 票据套利利润计算器',
+      subtitle: '定期存款质押 → 银行承兑汇票 → 贴现套利 · 自动化利润核算',
+      badge: '银行承兑汇票',
+      labelJ: '贴现年化利率',
+      labelF1: '开票手续费',
+      labelF2: '贴现手续费',
+      labelZday: '开票至贴现天数',
+      hintZday: '从开票到贴现完成还款的自然天数',
+      card3Title: '📉 贴现成本',
+      card3Formula: '贴现利息 = 票面金额 × 10000 × (贴现利率 ÷ 100) × 存款期限',
+      card3StepLabel: '贴现利息',
+      card4F1Label: '开票手续费',
+      card4F2Label: '贴现手续费',
+      card5Formula: '拆借利息 = 票面金额 × 10000 × (拆借日利率 ÷ 100) × 贴现天数',
+      pdfFileName: '套利计算_银行承兑汇票',
+    },
+    lc: {
+      type: 'lc',
+      title: '📊 信用证套利利润计算器',
+      subtitle: '定期存款质押 → 银行信用证 → 议付套利 · 自动化利润核算',
+      badge: '信用证',
+      labelJ: '议付年化利率',
+      labelF1: '开证手续费',
+      labelF2: '议付手续费',
+      labelZday: '开证至议付天数',
+      hintZday: '从开证到议付完成还款的自然天数',
+      card3Title: '📉 议付成本',
+      card3Formula: '议付利息 = 票面金额 × 10000 × (议付利率 ÷ 100) × 存款期限',
+      card3StepLabel: '议付利息',
+      card4F1Label: '开证手续费',
+      card4F2Label: '议付手续费',
+      card5Formula: '拆借利息 = 票面金额 × 10000 × (拆借日利率 ÷ 100) × 议付天数',
+      pdfFileName: '套利计算_信用证',
+    }
+  };
+
+  let currentCalcType = 'bill';
+  const inputState = { bill: {}, lc: {} };
+
+  // ═══════════════════════════════════════
+  // DOM 引用
+  // ═══════════════════════════════════════
+  const elX = document.getElementById('X');
+  const elY = document.getElementById('Y');
+  const elI = document.getElementById('i');
+  const elJ = document.getElementById('j');
+  const elF1 = document.getElementById('F1');
+  const elF2 = document.getElementById('F2');
+  const elR = document.getElementById('r');
+  const elZ = document.getElementById('z');
+  const elA = document.getElementById('a');
+  const elZsub = document.getElementById('Z');
+  const elH = document.getElementById('H');
+  const allInputs = [elX, elY, elI, elJ, elF1, elF2, elR, elZ, elA, elZsub, elH];
+
+  // 动态标签元素
+  const lblJ = document.getElementById('lbl-j');
+  const lblF1 = document.getElementById('lbl-F1');
+  const lblF2 = document.getElementById('lbl-F2');
+  const lblZ = document.getElementById('lbl-z');
+  const hintZ = document.getElementById('hint-z');
+  const calcTitle = document.getElementById('calc-title');
+  const calcSubtitle = document.getElementById('calc-subtitle');
+  const calcBadge = document.getElementById('calc-badge');
+  const card3Title = document.getElementById('card3-title');
+  const card3Formula = document.getElementById('card3-formula');
+  const card5Formula = document.getElementById('card5-formula');
+
+  // ═══════════════════════════════════════
+  // 工具函数
+  // ═══════════════════════════════════════
+  function fmtMoney(v) {
+    return v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  function fmtPct(v) {
+    return v.toFixed(3) + '%';
+  }
+
+  // ═══════════════════════════════════════
+  // 视图切换
+  // ═══════════════════════════════════════
+  window.showView = function(view) {
+    const homeEl = document.getElementById('view-home');
+    const calcEl = document.getElementById('view-calc');
+    const quoteEl = document.getElementById('view-quote');
+    const bidEl   = document.getElementById('view-stats-bid');
+    const winEl   = document.getElementById('view-stats-win');
+    const doneEl  = document.getElementById('view-stats-done');
+
+    // 隐藏所有视图
+    homeEl.style.display = 'none';
+    calcEl.style.display = 'none';
+    if (quoteEl) quoteEl.style.display = 'none';
+    if (bidEl)   bidEl.style.display   = 'none';
+    if (winEl)   winEl.style.display   = 'none';
+    if (doneEl)  doneEl.style.display  = 'none';
+
+    if (view === 'home') {
+      saveInputs(currentCalcType);
+      homeEl.style.display = 'block';
+    } else if (view === 'bill' || view === 'lc') {
+      saveInputs(currentCalcType);
+      currentCalcType = view;
+      applyLabels(view);
+      restoreInputs(view);
+      calcEl.style.display = 'block';
+      recalc();
+    } else if (view === 'quote') {
+      calcEl.style.display = 'none';
+      if (quoteEl) quoteEl.style.display = 'block';
+      recalcQuote();
+    } else if (view === 'stats-bid') {
+      if (bidEl) bidEl.style.display = 'block';
+      statsRenderBid();
+    } else if (view === 'stats-win') {
+      if (winEl) winEl.style.display = 'block';
+      statsRenderWin();
+    } else if (view === 'stats-done') {
+      if (doneEl) doneEl.style.display = 'block';
+      statsRenderDone();
+    }
+  };
+
+  function saveInputs(type) {
+    const state = {};
+    allInputs.forEach(el => { state[el.id] = el.value; });
+    inputState[type] = state;
+  }
+
+  function restoreInputs(type) {
+    const state = inputState[type] || {};
+    allInputs.forEach(el => {
+      if (state.hasOwnProperty(el.id)) {
+        el.value = state[el.id];
+      }
+    });
+  }
+
+  function applyLabels(type) {
+    const L = LABELS[type];
+    calcTitle.textContent = L.title;
+    calcSubtitle.textContent = L.subtitle;
+    calcBadge.textContent = L.badge;
+    lblJ.innerHTML = L.labelJ + ' <span class="unit">%</span>';
+    lblF1.innerHTML = L.labelF1 + ' <span class="unit">元</span>';
+    lblF2.innerHTML = L.labelF2 + ' <span class="unit">元</span>';
+    lblZ.innerHTML = L.labelZday + ' <span class="unit">天</span>';
+    hintZ.textContent = L.hintZday;
+    card3Title.textContent = L.card3Title;
+    card3Formula.textContent = L.card3Formula;
+    card5Formula.textContent = L.card5Formula;
+  }
+
+  // ═══════════════════════════════════════
+  // 输入验证
+  // ═══════════════════════════════════════
+  function validate(input, value, label) {
+    const hintEl = document.getElementById('hint-' + input.id);
+    if (value === '' || isNaN(value)) {
+      input.classList.add('invalid');
+      hintEl.textContent = '⚠ ' + label + ' 请输入有效数字';
+      hintEl.className = 'hint error';
+      return false;
+    }
+    if ((input === elX || input === elY || input === elZ) && value <= 0) {
+      input.classList.add('invalid');
+      hintEl.textContent = '⚠ ' + label + ' 必须大于 0';
+      hintEl.className = 'hint error';
+      return false;
+    }
+    if ((input === elI || input === elJ || input === elF1 || input === elF2 ||
+         input === elR || input === elA || input === elZsub || input === elH) && value < 0) {
+      input.classList.add('invalid');
+      hintEl.textContent = '⚠ ' + label + ' 不能为负数';
+      hintEl.className = 'hint error';
+      return false;
+    }
+    input.classList.remove('invalid');
+    hintEl.textContent = '';
+    hintEl.className = 'hint';
+    return true;
+  }
+
+  function getLabels() {
+    return ['票面金额','存款/票期','存款利率',
+            LABELS[currentCalcType].labelJ,
+            LABELS[currentCalcType].labelF1,
+            LABELS[currentCalcType].labelF2,
+            '拆借日利率',LABELS[currentCalcType].labelZday,
+            '运营成本率','城投补贴费率','后置利息率'];
+  }
+
+  // ═══════════════════════════════════════
+  // 读取参数
+  // ═══════════════════════════════════════
+  function getParams() {
+    const labels = getLabels();
+    const vals = [
+      parseFloat(elX.value), parseFloat(elY.value), parseFloat(elI.value),
+      parseFloat(elJ.value), parseFloat(elF1.value), parseFloat(elF2.value),
+      parseFloat(elR.value), parseFloat(elZ.value), parseFloat(elA.value),
+      parseFloat(elZsub.value), parseFloat(elH.value)
+    ];
+    const inputs = allInputs;
+
+    let allOk = true;
+    for (let i = 0; i < inputs.length; i++) {
+      if (!validate(inputs[i], vals[i], labels[i])) allOk = false;
+    }
+    if (!allOk) return null;
+
+    return {
+      X: vals[0], Y: vals[1], i: vals[2], j: vals[3],
+      F1: vals[4], F2: vals[5], r: vals[6], z: vals[7],
+      a: vals[8], Z: vals[9], H: vals[10]
+    };
+  }
+
+  // ═══════════════════════════════════════
+  // 主计算与渲染
+  // ═══════════════════════════════════════
+  function recalc() {
+    const p = getParams();
+    const L = LABELS[currentCalcType];
+
+    if (!p) {
+      document.getElementById('confirm-content').innerHTML =
+        '<span style="color:#a0aec0;">请完善上方输入参数</span>';
+      clearResults();
+      return;
+    }
+    const { X, Y, i, j, F1, F2, r, z, a, Z, H } = p;
+
+    const principal        = X * 10000;
+    const depositInterest  = principal * (i / 100) * Y;
+    const discountInterest = principal * (j / 100) * Y;
+    const grossProfit      = depositInterest - discountInterest;
+    const totalFees        = F1 + F2;
+    const bridgeCost       = principal * (r / 100) * z;
+    const opexCost         = principal * (a / 100);
+    const subsidyIncome    = principal * (Z / 100) * Y;
+    const deferredIncome   = depositInterest * (H / 100) * Y;
+    const netProfit        = grossProfit - totalFees - bridgeCost - opexCost + subsidyIncome + deferredIncome;
+    const annualReturn     = principal > 0 && Y > 0 ? (netProfit / principal / Y) * 100 : 0;
+
+    // ── 卡片1：输入确认 ──
+    document.getElementById('confirm-content').innerHTML =
+      `<span>票面金额：<b>${fmtMoney(X)}</b> 万元 &nbsp;|&nbsp; 存款/票期：<b>${Y}</b> 年 &nbsp;|&nbsp; ` +
+      `存款利率：<b>${fmtPct(i)}</b> &nbsp;|&nbsp; ${L.labelJ}：<b>${fmtPct(j)}</b></span><br>` +
+      `<span>${L.labelF1}：<b>${fmtMoney(F1)}</b> 元 &nbsp;|&nbsp; ${L.labelF2}：<b>${fmtMoney(F2)}</b> 元</span><br>` +
+      `<span>拆借日利率：<b>${fmtPct(r)}</b> &nbsp;|&nbsp; ${L.labelZday}：<b>${z}</b> 天 &nbsp;|&nbsp; 运营成本率：<b>${fmtPct(a)}</b></span><br>` +
+      `<span>城投补贴费率：<b>${fmtPct(Z)}</b> &nbsp;|&nbsp; 后置利息率：<b>${fmtPct(H)}</b></span>`;
+
+    // ── 卡片2：存款利息 ──
+    document.getElementById('deposit-steps').innerHTML =
+      `本金 = ${fmtMoney(X)} 万 × 10000 = <b>${fmtMoney(principal)}</b> 元<br>` +
+      `存款利息 = ${fmtMoney(principal)} × (${fmtPct(i)} ÷ 100) × ${Y} = ` +
+      `${fmtMoney(principal)} × ${(i/100).toFixed(5)} × ${Y}`;
+    document.getElementById('deposit-result').textContent = `= ${fmtMoney(depositInterest)} 元`;
+    document.getElementById('deposit-result').className = 'result positive';
+
+    // ── 卡片3：贴现/议付成本 ──
+    document.getElementById('discount-steps').innerHTML =
+      `${L.card3StepLabel} = ${fmtMoney(principal)} × (${fmtPct(j)} ÷ 100) × ${Y} = ` +
+      `${fmtMoney(principal)} × ${(j/100).toFixed(5)} × ${Y}`;
+    document.getElementById('discount-result').textContent = `= ${fmtMoney(discountInterest)} 元`;
+    document.getElementById('discount-result').className = 'result negative';
+
+    const spreadClass = grossProfit >= 0 ? 'positive' : 'negative';
+    const spreadLabel = grossProfit >= 0 ? '盈利价差' : '倒挂亏损';
+    document.getElementById('spread-text').innerHTML =
+      `价差 = 存款利息 − ${L.card3StepLabel} = ${fmtMoney(depositInterest)} − ${fmtMoney(discountInterest)} = <b>${fmtMoney(grossProfit)}</b> 元`;
+    const spreadResultEl = document.getElementById('spread-result');
+    spreadResultEl.textContent = grossProfit >= 0
+      ? `📈 ${spreadLabel}：+${fmtMoney(grossProfit)} 元`
+      : `📉 ${spreadLabel}：${fmtMoney(grossProfit)} 元`;
+    spreadResultEl.className = 'result ' + spreadClass;
+
+    // ── 卡片4：银行手续费 ──
+    document.getElementById('fees-steps').innerHTML =
+      `${L.card4F1Label} = ${fmtMoney(F1)} 元<br>${L.card4F2Label} = ${fmtMoney(F2)} 元`;
+    document.getElementById('fees-result').textContent = `合计手续费 = ${fmtMoney(totalFees)} 元`;
+
+    // ── 卡片5：拆借资金成本 ──
+    document.getElementById('bridge-steps').innerHTML =
+      `拆借本金 = ${fmtMoney(principal)} 元<br>` +
+      `拆借利息 = ${fmtMoney(principal)} × (${fmtPct(r)} ÷ 100) × ${z} 天 = ` +
+      `${fmtMoney(principal)} × ${(r/100).toFixed(5)} × ${z}`;
+    document.getElementById('bridge-result').textContent = `= ${fmtMoney(bridgeCost)} 元`;
+    document.getElementById('bridge-result').className = 'result negative';
+
+    // ── 卡片6：公司运营成本 ──
+    document.getElementById('opex-steps').innerHTML =
+      `运营成本 = ${fmtMoney(principal)} × (${fmtPct(a)} ÷ 100)` +
+      ` = ${fmtMoney(principal)} × ${(a/100).toFixed(5)}`;
+    document.getElementById('opex-result').textContent = `= ${fmtMoney(opexCost)} 元`;
+    document.getElementById('opex-result').className = 'result negative';
+
+    // ── 卡片7：城投公司补贴收入 ──
+    document.getElementById('subsidy-steps').innerHTML =
+      `补贴收入 = ${fmtMoney(principal)} × (${fmtPct(Z)} ÷ 100) × ${Y}` +
+      ` = ${fmtMoney(principal)} × ${(Z/100).toFixed(5)} × ${Y}`;
+    document.getElementById('subsidy-result').textContent = `= +${fmtMoney(subsidyIncome)} 元`;
+    document.getElementById('subsidy-result').className = 'result positive';
+
+    // ── 卡片8：后置利息收入 ──
+    document.getElementById('deferred-steps').innerHTML =
+      `后置利息 = 存款利息 × (${fmtPct(H)} ÷ 100) × ${Y}<br>` +
+      `= ${fmtMoney(depositInterest)} × ${(H/100).toFixed(5)} × ${Y}`;
+    document.getElementById('deferred-result').textContent = `= +${fmtMoney(deferredIncome)} 元`;
+    document.getElementById('deferred-result').className = 'result positive';
+
+    // ── 卡片9：净利润 ──
+    document.getElementById('profit-steps').innerHTML =
+      `净利润 = 价差 − 手续费 − 拆借成本 − 运营成本 + 补贴收入 + 后置利息<br>` +
+      `= ${fmtMoney(grossProfit)} − ${fmtMoney(totalFees)} − ${fmtMoney(bridgeCost)} − ${fmtMoney(opexCost)} + ${fmtMoney(subsidyIncome)} + ${fmtMoney(deferredIncome)}`;
+
+    const profitEl = document.getElementById('profit-result');
+    const annualEl = document.getElementById('profit-annual');
+    const cardProfit = document.getElementById('card-profit');
+
+    if (netProfit >= 0) {
+      profitEl.textContent = `✓ 套利盈利：+${fmtMoney(netProfit)} 元`;
+      profitEl.className = 'result positive';
+      annualEl.innerHTML = `年化收益率 = ${fmtMoney(netProfit)} ÷ ${fmtMoney(principal)} ÷ ${Y} × 100% = <span class="badge badge-profit">${fmtPct(annualReturn)}</span>`;
+      cardProfit.className = 'card card-profit profit-positive';
+    } else {
+      profitEl.textContent = `✗ 套利亏损：${fmtMoney(netProfit)} 元`;
+      profitEl.className = 'result negative';
+      annualEl.innerHTML = `年化收益率 = ${fmtMoney(netProfit)} ÷ ${fmtMoney(principal)} ÷ ${Y} × 100% = <span class="badge badge-loss">${fmtPct(annualReturn)}</span>`;
+      cardProfit.className = 'card card-profit profit-negative';
+    }
+  }
+
+  function clearResults() {
+    const ids = ['deposit-steps','deposit-result','discount-steps','discount-result',
+                 'spread-text','spread-result','fees-steps','fees-result',
+                 'bridge-steps','bridge-result','opex-steps','opex-result',
+                 'subsidy-steps','subsidy-result','deferred-steps','deferred-result',
+                 'profit-steps','profit-result','profit-annual'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '—'; });
+    document.getElementById('card-profit').className = 'card card-profit';
+    ['deposit-result','discount-result','spread-result','bridge-result','opex-result',
+     'subsidy-result','deferred-result','profit-result'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = '—'; el.className = 'result'; }
+    });
+  }
+
+  // ═══════════════════════════════════════
+  // PDF 导出
+  // ═══════════════════════════════════════
+  window.exportPDF = function() {
+    const L = LABELS[currentCalcType];
+    const today = new Date();
+    const ds = today.getFullYear() +
+      String(today.getMonth() + 1).padStart(2, '0') +
+      String(today.getDate()).padStart(2, '0');
+    document.title = L.pdfFileName + '_' + ds;
+    window.print();
+    setTimeout(() => { document.title = '贸易公司套利利润计算系统'; }, 500);
+  };
+
+  // ═══════════════════════════════════════
+  // 报价计算器逻辑
+  // ═══════════════════════════════════════
+  var qElType       = document.getElementById('quote-type');
+  var qElAmount     = document.getElementById('quote-amount');
+  var qElCostRate   = document.getElementById('quote-cost-rate');
+  var qElPayType    = document.getElementById('quote-pay-type');
+  var qElProfitRate = document.getElementById('quote-profit-rate');
+  var qElPrivateRate = document.getElementById('quote-private-rate');
+  var qElCorpRate   = document.getElementById('quote-corp-rate');
+  var qElVatRate    = document.getElementById('quote-vat-rate');
+  var qAllInputs    = [qElAmount, qElCostRate, qElProfitRate, qElPrivateRate, qElCorpRate, qElVatRate];
+
+  // 条件显示切换
+  function toggleCondGroups() {
+    var val = qElPayType.value;
+    var grpPrivate = document.getElementById('cond-private');
+    var grpCorp    = document.getElementById('cond-corp');
+    if (grpPrivate) grpPrivate.className = (val === 'private') ? 'cond-group active' : 'cond-group';
+    if (grpCorp)    grpCorp.className    = (val === 'corp')    ? 'cond-group active' : 'cond-group';
+  }
+  if (qElPayType) {
+    qElPayType.addEventListener('change', function() {
+      toggleCondGroups();
+      recalcQuote();
+    });
+    toggleCondGroups(); // 初始状态
+  }
+
+  function validateQuote(input, value, label) {
+    var hintId = 'hint-' + input.id;
+    var hintEl = document.getElementById(hintId);
+    if (!hintEl) return true;
+    if (value === '' || isNaN(value)) {
+      input.classList.add('invalid');
+      hintEl.textContent = '⚠ ' + label + ' 请输入有效数字';
+      hintEl.className = 'hint error';
+      return false;
+    }
+    if (input === qElAmount && value <= 0) {
+      input.classList.add('invalid');
+      hintEl.textContent = '⚠ ' + label + ' 必须大于 0';
+      hintEl.className = 'hint error';
+      return false;
+    }
+    if (value < 0) {
+      input.classList.add('invalid');
+      hintEl.textContent = '⚠ ' + label + ' 不能为负数';
+      hintEl.className = 'hint error';
+      return false;
+    }
+    input.classList.remove('invalid');
+    hintEl.textContent = '';
+    hintEl.className = 'hint';
+    return true;
+  }
+
+  function getQuoteParams() {
+    // 验证下拉选择
+    var typeOk = true;
+    var typeHintEl = document.getElementById('hint-quote-type');
+    if (!qElType.value) {
+      typeOk = false;
+      qElType.classList.add('invalid');
+      if (typeHintEl) { typeHintEl.textContent = '⚠ 请选择业务类型'; typeHintEl.className = 'hint error'; }
+    } else {
+      qElType.classList.remove('invalid');
+      if (typeHintEl) { typeHintEl.textContent = ''; typeHintEl.className = 'hint'; }
+    }
+
+    var payTypeOk = true;
+    var payHintEl = document.getElementById('hint-quote-pay-type');
+    if (!qElPayType.value) {
+      payTypeOk = false;
+      qElPayType.classList.add('invalid');
+      if (payHintEl) { payHintEl.textContent = '⚠ 请选择付费方式'; payHintEl.className = 'hint error'; }
+    } else {
+      qElPayType.classList.remove('invalid');
+      if (payHintEl) { payHintEl.textContent = ''; payHintEl.className = 'hint'; }
+    }
+
+    var amount     = parseFloat(qElAmount.value);
+    var costRate   = parseFloat(qElCostRate.value);
+    var profitRate = parseFloat(qElProfitRate.value);
+
+    var okAmt  = validateQuote(qElAmount,     amount,     '业务金额');
+    var okCost = validateQuote(qElCostRate,   costRate,   '成本费率');
+    var okProf = validateQuote(qElProfitRate, profitRate, '目标利润率');
+
+    var payType = qElPayType.value;
+    var privateRate, corpRate, vatRate;
+    var okPrivate = true, okCorp = true, okVat = true;
+
+    if (payType === 'private') {
+      privateRate = parseFloat(qElPrivateRate.value);
+      okPrivate = validateQuote(qElPrivateRate, privateRate, '对私税筹费率');
+      corpRate = 0; vatRate = 0;
+    } else if (payType === 'corp') {
+      corpRate = parseFloat(qElCorpRate.value);
+      vatRate  = parseFloat(qElVatRate.value);
+      okCorp = validateQuote(qElCorpRate, corpRate, '对公开票费率');
+      okVat  = validateQuote(qElVatRate,  vatRate,  '增值税率');
+      privateRate = 0;
+    } else {
+      return null; // 未选择付费方式
+    }
+
+    if (!typeOk || !payTypeOk || !okAmt || !okCost || !okProf || !okPrivate || !okCorp || !okVat) return null;
+
+    return { type: qElType.value, amount, costRate, payType, profitRate, privateRate, corpRate, vatRate };
+  }
+
+  function recalcQuote() {
+    var p = getQuoteParams();
+    if (!p) {
+      document.getElementById('quote-confirm-content').innerHTML = '<span style="color:#a0aec0;">请完善上方输入参数</span>';
+      clearQuoteResults();
+      return;
+    }
+    var amount       = p.amount;
+    var costRate     = p.costRate;
+    var payType      = p.payType;
+    var profitRate   = p.profitRate;
+    var privateRate  = p.privateRate;
+    var corpRate     = p.corpRate;
+    var vatRate      = p.vatRate;
+
+    var principal    = amount * 10000;  // 元
+    var costAmount   = principal * (costRate / 100);  // 贸易业务成本金额
+
+    var taxFee = 0, taxLabel1 = '', taxLabel2 = '', taxSteps = '';
+    var quoteAmount, companyProfit;
+
+    if (payType === 'private') {
+      // 对私税筹费 = 成本金额/(1-对私税筹费率) - 成本金额
+      taxFee = costAmount / (1 - privateRate / 100) - costAmount;
+      taxLabel1 = '对私税筹费';
+      taxSteps = taxLabel1 + ' = ' + fmtMoney(costAmount) + ' ÷ (1 − ' + privateRate.toFixed(3) + ' ÷ 100) − ' + fmtMoney(costAmount) + '<br>' +
+                 '= ' + fmtMoney(costAmount) + ' ÷ ' + (1 - privateRate/100).toFixed(5) + ' − ' + fmtMoney(costAmount) +
+                 ' = <b>' + fmtMoney(taxFee) + '</b> 元';
+      taxLabel2 = '';
+    } else if (payType === 'corp') {
+      // 对公开票费 = 成本金额/(1-对公开票费率) - 成本金额
+      var corpFee = costAmount / (1 - corpRate / 100) - costAmount;
+      // 增值税 = (成本金额 + 对公开票费) × 增值税率
+      var vatTax  = (costAmount + corpFee) * (vatRate / 100);
+      taxFee = corpFee + vatTax;
+      taxLabel1 = '对公开票费';
+      taxLabel2 = '增值税（无进项抵扣）';
+      taxSteps = taxLabel1 + ' = ' + fmtMoney(costAmount) + ' ÷ (1 − ' + corpRate.toFixed(3) + ' ÷ 100) − ' + fmtMoney(costAmount) + '<br>' +
+                 '= ' + fmtMoney(costAmount) + ' ÷ ' + (1 - corpRate/100).toFixed(5) + ' − ' + fmtMoney(costAmount) +
+                 ' = <b>' + fmtMoney(corpFee) + '</b> 元<br><br>' +
+                 taxLabel2 + ' = (' + fmtMoney(costAmount) + ' + ' + fmtMoney(corpFee) + ') × (' + vatRate.toFixed(3) + ' ÷ 100)<br>' +
+                 '= ' + fmtMoney(costAmount + corpFee) + ' × ' + (vatRate/100).toFixed(5) +
+                 ' = <b>' + fmtMoney(vatTax) + '</b> 元<br><br>' +
+                 '税费合计 = ' + fmtMoney(corpFee) + ' + ' + fmtMoney(vatTax) + ' = <b>' + fmtMoney(taxFee) + '</b> 元';
+    }
+
+    // 报价金额 = (成本金额 + 税费) / (1 - 目标利润率)
+    quoteAmount = (costAmount + taxFee) / (1 - profitRate / 100);
+    // 公司利润 = 报价金额 × 目标利润率
+    companyProfit = quoteAmount * (profitRate / 100);
+
+    var quoteWan = quoteAmount / 10000;
+
+    // ── 卡片1：输入确认 ──
+    var confirmHTML = '业务类型：<b>' + p.type + '</b> &nbsp;|&nbsp; 业务金额：<b>' + fmtMoney(amount) + '</b> 万元 &nbsp;|&nbsp; 成本费率：<b>' + fmtPct(costRate) + '</b><br>' +
+      '付费方式：<b>' + (payType === 'private' ? '对私' : '对公') + '</b> &nbsp;|&nbsp; 目标利润率：<b>' + fmtPct(profitRate) + '</b>';
+    if (payType === 'private') {
+      confirmHTML += ' &nbsp;|&nbsp; 对私税筹费率：<b>' + fmtPct(privateRate) + '</b>';
+    } else {
+      confirmHTML += '<br>对公开票费率：<b>' + fmtPct(corpRate) + '</b> &nbsp;|&nbsp; 增值税率：<b>' + fmtPct(vatRate) + '</b>';
+    }
+    document.getElementById('quote-confirm-content').innerHTML = confirmHTML;
+
+    // ── 卡片2：贸易业务成本 ──
+    document.getElementById('quote-cost-steps').innerHTML =
+      '成本金额 = ' + fmtMoney(amount) + ' 万 × 10000 × (' + costRate.toFixed(3) + ' ÷ 100)<br>' +
+      '= ' + fmtMoney(principal) + ' × ' + (costRate/100).toFixed(5) +
+      ' = <b>' + fmtMoney(costAmount) + '</b> 元';
+    document.getElementById('quote-cost-result').textContent = '= ' + fmtMoney(costAmount) + ' 元';
+
+    // ── 卡片3：税费明细 ──
+    document.getElementById('quote-tax-steps').innerHTML = taxSteps;
+    document.getElementById('quote-tax-result').textContent = '税费合计 = ' + fmtMoney(taxFee) + ' 元';
+
+    // ── 卡片4：对外报价 ──
+    var quoteRate = principal > 0 ? (quoteAmount / principal) * 100 : 0;
+    document.getElementById('quote-price-steps').innerHTML =
+      '报价金额 = (' + fmtMoney(costAmount) + ' + ' + fmtMoney(taxFee) + ') ÷ (1 − ' + profitRate.toFixed(3) + ' ÷ 100)<br>' +
+      '= ' + fmtMoney(costAmount + taxFee) + ' ÷ ' + (1 - profitRate/100).toFixed(5) +
+      ' = <b>' + fmtMoney(quoteAmount) + '</b> 元<br>' +
+      '= <b>' + fmtMoney(quoteWan) + '</b> 万元<br><br>' +
+      '报价费率 = 报价金额 ÷ (业务金额 × 10000) × 100%<br>' +
+      '= ' + fmtMoney(quoteAmount) + ' ÷ ' + fmtMoney(principal) + ' × 100%' +
+      ' = <b>' + quoteRate.toFixed(3) + '%</b>';
+    document.getElementById('quote-price-result').textContent = '对外最低报价：' + fmtMoney(quoteAmount) + ' 元（' + fmtMoney(quoteWan) + ' 万元） | 报价费率：' + quoteRate.toFixed(3) + '%';
+    document.getElementById('quote-price-result').className = 'result positive';
+
+    // ── 卡片5：公司利润 ──
+    document.getElementById('quote-profit-steps').innerHTML =
+      '公司利润 = ' + fmtMoney(quoteAmount) + ' × (' + profitRate.toFixed(3) + ' ÷ 100)<br>' +
+      '= ' + fmtMoney(quoteAmount) + ' × ' + (profitRate/100).toFixed(5) +
+      ' = <b>' + fmtMoney(companyProfit) + '</b> 元';
+    var actualRate = quoteAmount > 0 ? (companyProfit / quoteAmount * 100) : 0;
+
+    var profitCard = document.getElementById('card-quote-profit');
+    var profitResultEl = document.getElementById('quote-profit-result');
+    var profitRateDisplay = document.getElementById('quote-profit-rate-display');
+
+    if (companyProfit >= 0) {
+      profitResultEl.textContent = '✓ 预期利润：+' + fmtMoney(companyProfit) + ' 元';
+      profitResultEl.className = 'result positive';
+      profitRateDisplay.innerHTML = '实际利润率：<span class="badge badge-profit">' + fmtPct(actualRate) + '</span>';
+      profitCard.className = 'card card-profit profit-positive';
+    } else {
+      profitResultEl.textContent = '✗ 预期亏损：' + fmtMoney(companyProfit) + ' 元';
+      profitResultEl.className = 'result negative';
+      profitRateDisplay.innerHTML = '实际利润率：<span class="badge badge-loss">' + fmtPct(actualRate) + '</span>';
+      profitCard.className = 'card card-profit profit-negative';
+    }
+  }
+
+  function clearQuoteResults() {
+    var ids = ['quote-cost-steps','quote-cost-result','quote-tax-steps','quote-tax-result',
+               'quote-price-steps','quote-price-result','quote-profit-steps',
+               'quote-profit-result','quote-profit-rate-display'];
+    ids.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = '—';
+    });
+    var pc = document.getElementById('card-quote-profit');
+    if (pc) pc.className = 'card card-profit';
+    ['quote-cost-result','quote-tax-result','quote-price-result','quote-profit-result'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) { el.textContent = '—'; el.className = 'result'; }
+    });
+  }
+
+  // PDF导出 - 报价计算器
+  window.exportQuotePDF = function() {
+    var today = new Date();
+    var ds = today.getFullYear() +
+      String(today.getMonth() + 1).padStart(2, '0') +
+      String(today.getDate()).padStart(2, '0');
+    var bizType = qElType.value || '未选择';
+    document.title = '贸易金融报价_' + bizType + '_' + ds;
+    window.print();
+    setTimeout(function() { document.title = '贸易公司套利利润计算系统'; }, 500);
+  };
+
+  // 报价计算器输入事件绑定
+  qAllInputs.forEach(function(input) {
+    input.addEventListener('input', recalcQuote);
+  });
+  if (qElType) {
+    qElType.addEventListener('change', recalcQuote);
+  }
+
+  // ═══════════════════════════════════════
+  // 业务统计系统
+  // ═══════════════════════════════════════
+  const STORAGE_KEYS = { bid: 'trade_bidding', win: 'trade_won', done: 'trade_completed' };
+  const BIZ_TYPES = ['银承-回报','银承-供应链','信用证-回报','信用证-供应链','跑量/受托支付','存款','时点'];
+
+  function statsLoad(key) {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS[key]) || '[]'); }
+    catch(e) { return []; }
+  }
+  function statsSave(key, data) {
+    localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(data));
+  }
+
+  // 投标阶段：添加记录
+  window.statsAddBid = function() {
+    var data = statsLoad('bid');
+    data.push({ id: Date.now(), region:'', company:'', bank:'', amount:'', bizType:'', time:'', person:'' });
+    statsSave('bid', data);
+    statsRenderBid();
+  };
+
+  // 全选/取消全选
+  window.statsToggleAll = function(stage) {
+    var checked = document.getElementById(stage + '-check-all').checked;
+    var cbs = document.querySelectorAll('#' + stage + '-tbody input[type="checkbox"]');
+    for (var i = 0; i < cbs.length; i++) { cbs[i].checked = checked; }
+  };
+
+  // 获取选中行的索引
+  function statsGetChecked(stage) {
+    var cbs = document.querySelectorAll('#' + stage + '-tbody input[type="checkbox"]:checked');
+    var indices = [];
+    for (var i = 0; i < cbs.length; i++) {
+      indices.push(parseInt(cbs[i].getAttribute('data-index')));
+    }
+    return indices;
+  }
+
+  // 投标阶段：批量删除（未中标）
+  window.statsBatchDelete = function(stage) {
+    var indices = statsGetChecked(stage);
+    if (indices.length === 0) { alert('请先选择要删除的记录'); return; }
+    if (!confirm('确认删除选中的 ' + indices.length + ' 条记录？\n（此操作不可恢复）')) return;
+    var data = statsLoad(stage);
+    // 从后往前删避免索引移位
+    indices.sort(function(a,b){ return b - a; });
+    for (var i = 0; i < indices.length; i++) { data.splice(indices[i], 1); }
+    statsSave(stage, data);
+    statsRenderBid();
+  };
+
+  // 投标→中标 迁移
+  window.statsMigrateBidToWin = function() {
+    var indices = statsGetChecked('bid');
+    if (indices.length === 0) { alert('请先选择要迁移的记录'); return; }
+    // 校验必填字段
+    var bidData = statsLoad('bid');
+    for (var i = 0; i < indices.length; i++) {
+      var r = bidData[indices[i]];
+      if (!r.region || !r.company || !r.bank || !r.amount || !r.bizType || !r.time || !r.person) {
+        alert('请完善第 ' + (indices[i] + 1) + ' 行所有字段后再迁移');
+        return;
+      }
+    }
+    if (!confirm('确认将选中的 ' + indices.length + ' 条记录迁移至中标阶段？')) return;
+    var winData = statsLoad('win');
+    indices.sort(function(a,b){ return b - a; });
+    for (var i = 0; i < indices.length; i++) {
+      var idx = indices[i];
+      var rec = bidData[idx];
+      winData.push({
+        id: Date.now() + i,
+        region: rec.region, company: rec.company, bank: rec.bank,
+        amount: rec.amount, bizType: rec.bizType, time: rec.time, person: rec.person,
+        trader: '', tradeCost: '', winRate: '', winAmount: ''
+      });
+      bidData.splice(idx, 1);
+    }
+    statsSave('bid', bidData);
+    statsSave('win', winData);
+    statsRenderBid();
+    alert('已迁移 ' + indices.length + ' 条记录至中标阶段');
+  };
+
+  // 中标→完成 迁移
+  window.statsMigrateWinToDone = function() {
+    var indices = statsGetChecked('win');
+    if (indices.length === 0) { alert('请先选择要迁移的记录'); return; }
+    var winData = statsLoad('win');
+    for (var i = 0; i < indices.length; i++) {
+      var r = winData[indices[i]];
+      if (!r.trader || !r.tradeCost || !r.winRate || !r.winAmount) {
+        alert('请完善第 ' + (indices[i] + 1) + ' 行所有中标字段后再迁移');
+        return;
+      }
+    }
+    if (!confirm('确认将选中的 ' + indices.length + ' 条记录迁移至完成阶段？')) return;
+    var doneData = statsLoad('done');
+    indices.sort(function(a,b){ return b - a; });
+    for (var i = 0; i < indices.length; i++) {
+      var idx = indices[i];
+      var rec = winData[idx];
+      doneData.push({
+        id: Date.now() + i,
+        region: rec.region, company: rec.company, bank: rec.bank,
+        amount: rec.amount, bizType: rec.bizType, time: rec.time, person: rec.person,
+        actualCost: '', actualRevenue: ''
+      });
+      winData.splice(idx, 1);
+    }
+    statsSave('win', winData);
+    statsSave('done', doneData);
+    statsRenderWin();
+    alert('已迁移 ' + indices.length + ' 条记录至完成阶段');
+  };
+
+  // 更新单个字段
+  function statsUpdateField(stage, rowIndex, field, value) {
+    var data = statsLoad(stage);
+    if (rowIndex >= 0 && rowIndex < data.length) {
+      data[rowIndex][field] = value;
+      statsSave(stage, data);
+      // 中标阶段：联动更新预计利润
+      if (stage === 'win' && (field === 'tradeCost' || field === 'winAmount')) {
+        statsRenderWin();
+      }
+      // 完成阶段：联动更新实际利润
+      if (stage === 'done' && (field === 'actualCost' || field === 'actualRevenue')) {
+        statsRenderDone();
+      }
+      // 更新记录计数
+      var countEl = document.getElementById(stage + '-count');
+      if (countEl) countEl.textContent = data.length;
+    }
+  }
+
+  // 渲染投标阶段表格
+  function statsRenderBid() {
+    var data = statsLoad('bid');
+    var tbody = document.getElementById('bid-tbody');
+    var countEl = document.getElementById('bid-count');
+    if (countEl) countEl.textContent = data.length;
+    document.getElementById('bid-check-all').checked = false;
+
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-hint">暂无记录，点击「＋ 添加记录」开始</td></tr>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < data.length; i++) {
+      var r = data[i];
+      html += '<tr>';
+      html += '<td><input type="checkbox" data-index="' + i + '"></td>';
+      html += '<td><input type="text" value="' + escHtml(r.region||'') + '" onchange="statsUpdateField(\'bid\','+i+',\'region\',this.value)"></td>';
+      html += '<td><input type="text" value="' + escHtml(r.company||'') + '" onchange="statsUpdateField(\'bid\','+i+',\'company\',this.value)"></td>';
+      html += '<td><input type="text" value="' + escHtml(r.bank||'') + '" onchange="statsUpdateField(\'bid\','+i+',\'bank\',this.value)"></td>';
+      html += '<td><input type="number" value="' + escHtml(r.amount||'') + '" onchange="statsUpdateField(\'bid\','+i+',\'amount\',this.value)" step="0.01" min="0" style="min-width:80px;"></td>';
+      html += '<td><select onchange="statsUpdateField(\'bid\','+i+',\'bizType\',this.value)" style="width:100%;padding:5px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;text-align:center;font-family:inherit;">' + bizTypeOptions(r.bizType) + '</select></td>';
+      html += '<td><input type="text" value="' + escHtml(r.time||'') + '" onchange="statsUpdateField(\'bid\','+i+',\'time\',this.value)" placeholder="如 2026/06" style="min-width:80px;"></td>';
+      html += '<td><input type="text" value="' + escHtml(r.person||'') + '" onchange="statsUpdateField(\'bid\','+i+',\'person\',this.value)"></td>';
+      html += '</tr>';
+    }
+    tbody.innerHTML = html;
+  }
+
+  // 渲染中标阶段表格
+  function statsRenderWin() {
+    var data = statsLoad('win');
+    var tbody = document.getElementById('win-tbody');
+    var countEl = document.getElementById('win-count');
+    if (countEl) countEl.textContent = data.length;
+    document.getElementById('win-check-all').checked = false;
+
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="13" class="empty-hint">暂无中标记录，请从投标阶段迁移</td></tr>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < data.length; i++) {
+      var r = data[i];
+      var ep = (parseFloat(r.winAmount)||0) - (parseFloat(r.tradeCost)||0);
+      html += '<tr>';
+      html += '<td><input type="checkbox" data-index="' + i + '"></td>';
+      html += '<td><span class="readonly-field">' + escHtml(r.region||'') + '</span></td>';
+      html += '<td><span class="readonly-field">' + escHtml(r.company||'') + '</span></td>';
+      html += '<td><span class="readonly-field">' + escHtml(r.bank||'') + '</span></td>';
+      html += '<td><span class="readonly-field">' + escHtml(r.amount||'') + '</span></td>';
+      html += '<td><span class="readonly-field">' + escHtml(r.bizType||'') + '</span></td>';
+      html += '<td><span class="readonly-field">' + escHtml(r.time||'') + '</span></td>';
+      html += '<td><span class="readonly-field">' + escHtml(r.person||'') + '</span></td>';
+      html += '<td><input type="text" value="' + escHtml(r.trader||'') + '" onchange="statsUpdateField(\'win\','+i+',\'trader\',this.value)"></td>';
+      html += '<td><input type="number" value="' + escHtml(r.tradeCost||'') + '" onchange="statsUpdateField(\'win\','+i+',\'tradeCost\',this.value)" step="0.01" min="0" style="min-width:80px;"></td>';
+      html += '<td><input type="number" value="' + escHtml(r.winRate||'') + '" onchange="statsUpdateField(\'win\','+i+',\'winRate\',this.value)" step="0.01" min="0" style="min-width:70px;"></td>';
+      html += '<td><input type="number" value="' + escHtml(r.winAmount||'') + '" onchange="statsUpdateField(\'win\','+i+',\'winAmount\',this.value)" step="0.01" min="0" style="min-width:80px;"></td>';
+      html += '<td><span class="formula-field">' + ep.toFixed(2) + '</span></td>';
+      html += '</tr>';
+    }
+    tbody.innerHTML = html;
+  }
+
+  // 渲染完成阶段表格
+  function statsRenderDone() {
+    var data = statsLoad('done');
+    var tbody = document.getElementById('done-tbody');
+    var countEl = document.getElementById('done-count');
+    if (countEl) countEl.textContent = data.length;
+
+    var totalProfit = 0;
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="10" class="empty-hint">暂无完成记录，请从中标阶段迁移</td></tr>';
+    } else {
+      var html = '';
+      for (var i = 0; i < data.length; i++) {
+        var r = data[i];
+        var ap = (parseFloat(r.actualRevenue)||0) - (parseFloat(r.actualCost)||0);
+        totalProfit += ap;
+        html += '<tr>';
+        html += '<td><span class="readonly-field">' + escHtml(r.region||'') + '</span></td>';
+        html += '<td><span class="readonly-field">' + escHtml(r.company||'') + '</span></td>';
+        html += '<td><span class="readonly-field">' + escHtml(r.bank||'') + '</span></td>';
+        html += '<td><span class="readonly-field">' + escHtml(r.amount||'') + '</span></td>';
+        html += '<td><span class="readonly-field">' + escHtml(r.bizType||'') + '</span></td>';
+        html += '<td><span class="readonly-field">' + escHtml(r.time||'') + '</span></td>';
+        html += '<td><span class="readonly-field">' + escHtml(r.person||'') + '</span></td>';
+        html += '<td><input type="number" value="' + escHtml(r.actualCost||'') + '" onchange="statsUpdateField(\'done\','+i+',\'actualCost\',this.value)" step="0.01" min="0" style="min-width:80px;"></td>';
+        html += '<td><input type="number" value="' + escHtml(r.actualRevenue||'') + '" onchange="statsUpdateField(\'done\','+i+',\'actualRevenue\',this.value)" step="0.01" min="0" style="min-width:80px;"></td>';
+        html += '<td><span class="formula-field">' + ap.toFixed(2) + '</span></td>';
+        html += '</tr>';
+      }
+      tbody.innerHTML = html;
+    }
+    document.getElementById('total-profit').textContent = totalProfit.toFixed(2);
+  }
+
+  // 业务类型下拉选项
+  function bizTypeOptions(selected) {
+    var opts = '<option value="">选择类型</option>';
+    for (var i = 0; i < BIZ_TYPES.length; i++) {
+      opts += '<option value="' + BIZ_TYPES[i] + '"' + (selected === BIZ_TYPES[i] ? ' selected' : '') + '>' + BIZ_TYPES[i] + '</option>';
+    }
+    return opts;
+  }
+
+  // HTML 转义
+  function escHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ═══════════════════════════════════════
+  // 事件绑定 & 初始化
+  // ═══════════════════════════════════════
+  allInputs.forEach(input => {
+    input.addEventListener('input', recalc);
+  });
+
+  // 默认显示主页
+  showView('home');
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>票据套利利润计算器</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f0f4f8;
+    color: #1a202c;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 50%, #3182ce 100%);
+    color: #fff;
+    padding: 20px 32px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  .header h1 { font-size: 22px; font-weight: 600; letter-spacing: 0.5px; }
+  .header p  { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+
+  .container {
+    display: flex;
+    gap: 24px;
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 24px;
+    align-items: flex-start;
+  }
+
+  /* ===== 左栏：输入区 ===== */
+  .panel-left {
+    flex: 0 0 355px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    padding: 24px 22px;
+    position: sticky;
+    top: 24px;
+  }
+  .panel-left h2 {
+    font-size: 16px;
+    color: #2c5282;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .form-group {
+    margin-bottom: 16px;
+  }
+  .form-group label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 4px;
+  }
+  .form-group label .unit {
+    font-weight: 400;
+    font-size: 11px;
+    color: #a0aec0;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 15px;
+    font-family: "SF Mono", "Consolas", "Menlo", monospace;
+    color: #2d3748;
+    background: #f7fafc;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  .form-group input:focus {
+    border-color: #3182ce;
+    box-shadow: 0 0 0 3px rgba(49,130,206,0.12);
+    background: #fff;
+  }
+  .form-group input.invalid {
+    border-color: #e53e3e;
+    box-shadow: 0 0 0 3px rgba(229,62,62,0.10);
+  }
+  .form-group .hint {
+    font-size: 11px;
+    color: #a0aec0;
+    margin-top: 2px;
+    min-height: 16px;
+  }
+  .form-group .hint.error {
+    color: #e53e3e;
+  }
+
+  /* ===== 右栏：计算明细 ===== */
+  .panel-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    padding: 20px 24px;
+    border-left: 4px solid transparent;
+    transition: border-color 0.3s;
+  }
+  .card .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card .formula {
+    font-family: "SF Mono", "Consolas", "Menlo", monospace;
+    font-size: 13px;
+    color: #718096;
+    background: #f7fafc;
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+  .card .steps {
+    font-size: 13px;
+    color: #4a5568;
+    line-height: 1.8;
+  }
+  .card .result {
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 8px;
+  }
+  .card .result.positive { color: #38a169; }
+  .card .result.negative { color: #e53e3e; }
+  .card .sub-result {
+    font-size: 13px;
+    color: #718096;
+    margin-top: 2px;
+  }
+
+  /* 卡片颜色标识 */
+  .card-confirm  { border-left-color: #a0aec0; }
+  .card-deposit  { border-left-color: #3182ce; }
+  .card-discount { border-left-color: #dd6b20; }
+  .card-fees     { border-left-color: #805ad5; }
+  .card-bridge   { border-left-color: #d53f8c; }
+  .card-opex     { border-left-color: #00a3c4; }
+  .card-subsidy  { border-left-color: #38a169; }
+  .card-deferred { border-left-color: #2b6cb0; }
+  .card-profit   { border-left-color: transparent; }
+  .card-profit.profit-positive { border-left-color: #38a169; background: #f0fff4; }
+  .card-profit.profit-negative { border-left-color: #e53e3e; background: #fff5f5; }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge-profit { background: #c6f6d5; color: #276749; }
+  .badge-loss   { background: #fed7d7; color: #9b2c2c; }
+
+  .divider {
+    border: none;
+    border-top: 1px dashed #e2e8f0;
+    margin: 10px 0;
+  }
+
+  @media (max-width: 860px) {
+    .container { flex-direction: column; padding: 0 12px; }
+    .panel-left { flex: none; position: static; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 票据套利利润计算器</h1>
+  <p>定期存款质押 → 银行承兑汇票 → 贴现套利 · 自动化利润核算</p>
+</div>
+
+<div class="container">
+
+  <!-- ========== 左栏：输入区 ========== -->
+  <div class="panel-left">
+    <h2>⚙️ 参数输入</h2>
+
+    <div class="form-group">
+      <label>票面金额 <span class="unit">万元</span></label>
+      <input type="number" id="X" value="0" min="0.01" step="0.01" placeholder="如 100">
+      <div class="hint" id="hint-X"></div>
+    </div>
+
+    <div class="form-group">
+      <label>存款/票期 <span class="unit">年</span></label>
+      <input type="number" id="Y" value="0" min="0.01" step="0.01" placeholder="如 1">
+      <div class="hint" id="hint-Y"></div>
+    </div>
+
+    <div class="form-group">
+      <label>定期存款年利率 <span class="unit">%</span></label>
+      <input type="number" id="i" value="0" min="0" step="0.01" placeholder="如 3.5">
+      <div class="hint" id="hint-i"></div>
+    </div>
+
+    <div class="form-group">
+      <label>贴现年化利率 <span class="unit">%</span></label>
+      <input type="number" id="j" value="0" min="0" step="0.01" placeholder="如 2.8">
+      <div class="hint" id="hint-j"></div>
+    </div>
+
+    <div class="form-group">
+      <label>开票手续费 <span class="unit">元</span></label>
+      <input type="number" id="F1" value="0" min="0" step="0.01" placeholder="如 5000">
+      <div class="hint" id="hint-F1"></div>
+    </div>
+
+    <div class="form-group">
+      <label>贴现手续费 <span class="unit">元</span></label>
+      <input type="number" id="F2" value="0" min="0" step="0.01" placeholder="如 3000">
+      <div class="hint" id="hint-F2"></div>
+    </div>
+
+    <div class="form-group" style="border-top:1px dashed #e2e8f0; padding-top:16px; margin-top:4px;">
+      <label>拆借资金日利率 <span class="unit">%/天</span></label>
+      <input type="number" id="r" value="0.1" min="0" step="0.001" placeholder="如 0.1">
+      <div class="hint" id="hint-r">存款本金实际来自拆借，按天计息</div>
+    </div>
+
+    <div class="form-group">
+      <label>开票至贴现天数 <span class="unit">天</span></label>
+      <input type="number" id="z" value="1" min="0" step="1" placeholder="如 30">
+      <div class="hint" id="hint-z">从开票到贴现完成还款的自然天数</div>
+    </div>
+
+    <div class="form-group" style="border-top:1px dashed #e2e8f0; padding-top:16px; margin-top:4px;">
+      <label>公司运营成本率 <span class="unit">%</span></label>
+      <input type="number" id="a" value="0.3" min="0" step="0.01" placeholder="如 0.3">
+      <div class="hint" id="hint-a">含税费，按开票金额比例核定</div>
+    </div>
+
+    <div class="form-group" style="border-top:1px dashed #e2e8f0; padding-top:16px; margin-top:4px;">
+      <label>城投补贴费率 <span class="unit">%</span></label>
+      <input type="number" id="Z" value="0" min="0" step="0.01" placeholder="如 0.5">
+      <div class="hint" id="hint-Z">城投公司指定存款银行而支付的补贴</div>
+    </div>
+
+    <div class="form-group">
+      <label>后置利息率 <span class="unit">%</span></label>
+      <input type="number" id="H" value="15" min="0" step="0.01" placeholder="如 15">
+      <div class="hint" id="hint-H">存款利息到期后付，城投公司补偿的后置收入</div>
+    </div>
+  </div>
+
+  <!-- ========== 右栏：计算明细 ========== -->
+  <div class="panel-right">
+
+    <!-- 卡片1：输入确认 -->
+    <div class="card card-confirm" id="card-confirm">
+      <div class="card-title">📋 输入确认</div>
+      <div class="steps" id="confirm-content">—</div>
+    </div>
+
+    <!-- 卡片2：存款利息 -->
+    <div class="card card-deposit" id="card-deposit">
+      <div class="card-title">💰 存款利息</div>
+      <div class="formula">存款利息 = 票面金额 × 10000 × (存款利率 ÷ 100) × 存款期限</div>
+      <div class="steps" id="deposit-steps">—</div>
+      <div class="result positive" id="deposit-result">—</div>
+    </div>
+
+    <!-- 卡片3：贴现成本 -->
+    <div class="card card-discount" id="card-discount">
+      <div class="card-title">📉 贴现成本</div>
+      <div class="formula">贴现利息 = 票面金额 × 10000 × (贴现利率 ÷ 100) × 存款期限</div>
+      <div class="steps" id="discount-steps">—</div>
+      <div class="result negative" id="discount-result">—</div>
+      <hr class="divider">
+      <div class="steps" id="spread-text">价差 = 存款利息 − 贴现利息 = —</div>
+      <div class="result" id="spread-result">—</div>
+    </div>
+
+    <!-- 卡片4：银行手续费 -->
+    <div class="card card-fees" id="card-fees">
+      <div class="card-title">🧾 银行手续费</div>
+      <div class="steps" id="fees-steps">—</div>
+      <div class="result negative" id="fees-result">—</div>
+    </div>
+
+    <!-- 卡片5：拆借资金成本 -->
+    <div class="card card-bridge" id="card-bridge">
+      <div class="card-title">🏦 拆借资金成本</div>
+      <div class="formula">拆借利息 = 票面金额 × 10000 × (拆借日利率 ÷ 100) × 贴现天数</div>
+      <div class="steps" id="bridge-steps">—</div>
+      <div class="result negative" id="bridge-result">—</div>
+    </div>
+
+    <!-- 卡片6：公司运营成本 -->
+    <div class="card card-opex" id="card-opex">
+      <div class="card-title">🏢 公司运营成本（含税）</div>
+      <div class="formula">运营成本 = 票面金额 × 10000 × (运营成本率 ÷ 100)</div>
+      <div class="steps" id="opex-steps">—</div>
+      <div class="result negative" id="opex-result">—</div>
+    </div>
+
+    <!-- 卡片7：城投公司补贴收入 -->
+    <div class="card card-subsidy" id="card-subsidy">
+      <div class="card-title">🏛️ 城投公司补贴收入</div>
+      <div class="formula">补贴收入 = 票面金额 × 10000 × (补贴费率 ÷ 100) × 存款期限</div>
+      <div class="steps" id="subsidy-steps">—</div>
+      <div class="result positive" id="subsidy-result">—</div>
+    </div>
+
+    <!-- 卡片8：后置利息收入 -->
+    <div class="card card-deferred" id="card-deferred">
+      <div class="card-title">⏳ 后置利息收入</div>
+      <div class="formula">后置利息 = 存款利息 × (后置利息率 ÷ 100) × 存款期限</div>
+      <div class="steps" id="deferred-steps">—</div>
+      <div class="result positive" id="deferred-result">—</div>
+    </div>
+
+    <!-- 卡片9：净利润 -->
+    <div class="card card-profit" id="card-profit">
+      <div class="card-title">📊 净利润</div>
+      <div class="formula">净利润 = 价差 − 手续费 − 拆借成本 − 运营成本 + 补贴收入 + 后置利息</div>
+      <div class="steps" id="profit-steps">—</div>
+      <div class="result" id="profit-result">—</div>
+      <div class="sub-result" id="profit-annual">—</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  // ── DOM 引用 ──
+  const elX = document.getElementById('X');
+  const elY = document.getElementById('Y');
+  const elI = document.getElementById('i');
+  const elJ = document.getElementById('j');
+  const elF1 = document.getElementById('F1');
+  const elF2 = document.getElementById('F2');
+  const elR = document.getElementById('r');
+  const elZ = document.getElementById('z');
+  const elA = document.getElementById('a');
+  const elZsub = document.getElementById('Z');
+  const elH = document.getElementById('H');
+  const allInputs = [elX, elY, elI, elJ, elF1, elF2, elR, elZ, elA, elZsub, elH];
+
+  // ── 工具函数 ──
+  function fmtMoney(v) {
+    return v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  function fmtPct(v) {
+    return v.toFixed(3) + '%';
+  }
+
+  // ── 输入验证 ──
+  function validate(input, value, label) {
+    const hintEl = document.getElementById('hint-' + input.id);
+    if (value === '' || isNaN(value)) {
+      input.classList.add('invalid');
+      hintEl.textContent = '⚠ ' + label + ' 请输入有效数字';
+      hintEl.className = 'hint error';
+      return false;
+    }
+    if ((input === elX || input === elY || input === elZ) && value <= 0) {
+      input.classList.add('invalid');
+      hintEl.textContent = '⚠ ' + label + ' 必须大于 0';
+      hintEl.className = 'hint error';
+      return false;
+    }
+    if ((input === elI || input === elJ || input === elF1 || input === elF2 || input === elR || input === elA || input === elZsub || input === elH) && value < 0) {
+      input.classList.add('invalid');
+      hintEl.textContent = '⚠ ' + label + ' 不能为负数';
+      hintEl.className = 'hint error';
+      return false;
+    }
+    input.classList.remove('invalid');
+    hintEl.textContent = '';
+    hintEl.className = 'hint';
+    return true;
+  }
+
+  // ── 读取参数 ──
+  function getParams() {
+    const X  = parseFloat(elX.value);
+    const Y  = parseFloat(elY.value);
+    const i  = parseFloat(elI.value);
+    const j  = parseFloat(elJ.value);
+    const F1 = parseFloat(elF1.value);
+    const F2 = parseFloat(elF2.value);
+    const r  = parseFloat(elR.value);
+    const z  = parseFloat(elZ.value);
+    const a  = parseFloat(elA.value);
+    const Z  = parseFloat(elZsub.value);
+    const H  = parseFloat(elH.value);
+
+    const okX  = validate(elX, X, '票面金额');
+    const okY  = validate(elY, Y, '存款/票期');
+    const okI  = validate(elI, i, '存款利率');
+    const okJ  = validate(elJ, j, '贴现利率');
+    const okF1 = validate(elF1, F1, '开票手续费');
+    const okF2 = validate(elF2, F2, '贴现手续费');
+    const okR  = validate(elR, r, '拆借日利率');
+    const okZ  = validate(elZ, z, '拆借天数');
+    const okA  = validate(elA, a, '运营成本率');
+    const okZsub = validate(elZsub, Z, '城投补贴费率');
+    const okH  = validate(elH, H, '后置利息率');
+    const allOk = okX && okY && okI && okJ && okF1 && okF2 && okR && okZ && okA && okZsub && okH;
+
+    if (!allOk) return null;
+    return { X, Y, i, j, F1, F2, r, z, a, Z, H };
+  }
+
+  // ── 主计算与渲染 ──
+  function recalc() {
+    const p = getParams();
+    if (!p) {
+      // 清空所有结果显示
+      document.getElementById('confirm-content').innerHTML = '<span style="color:#a0aec0;">请完善上方输入参数</span>';
+      clearResults();
+      return;
+    }
+    const { X, Y, i, j, F1, F2, r, z, a, Z, H } = p;
+
+    const principal = X * 10000;                          // 本金（元）
+    const depositInterest = principal * (i / 100) * Y;    // 存款利息
+    const discountInterest = principal * (j / 100) * Y;   // 贴现利息
+    const grossProfit = depositInterest - discountInterest; // 价差
+    const totalFees = F1 + F2;                            // 手续费合计
+    const bridgeCost = principal * (r / 100) * z;         // 拆借资金成本
+    const opexCost = principal * (a / 100);               // 公司运营成本（含税）
+    const subsidyIncome = principal * (Z / 100) * Y;          // 城投补贴收入
+    const deferredIncome = depositInterest * (H / 100) * Y; // 后置利息收入
+    const netProfit = grossProfit - totalFees - bridgeCost - opexCost + subsidyIncome + deferredIncome;
+    const annualReturn = principal > 0 && Y > 0
+      ? (netProfit / principal / Y) * 100
+      : 0;
+
+    // ── 卡片1：输入确认 ──
+    document.getElementById('confirm-content').innerHTML =
+      `<span>票面金额：<b>${fmtMoney(X)}</b> 万元 &nbsp;|&nbsp; 存款/票期：<b>${Y}</b> 年 &nbsp;|&nbsp; ` +
+      `存款利率：<b>${fmtPct(i)}</b> &nbsp;|&nbsp; 贴现利率：<b>${fmtPct(j)}</b></span><br>` +
+      `<span>开票手续费：<b>${fmtMoney(F1)}</b> 元 &nbsp;|&nbsp; 贴现手续费：<b>${fmtMoney(F2)}</b> 元</span><br>` +
+      `<span>拆借日利率：<b>${fmtPct(r)}</b> &nbsp;|&nbsp; 贴现天数：<b>${z}</b> 天 &nbsp;|&nbsp; 运营成本率：<b>${fmtPct(a)}</b></span><br>` +
+      `<span>城投补贴费率：<b>${fmtPct(Z)}</b> &nbsp;|&nbsp; 后置利息率：<b>${fmtPct(H)}</b></span>`;
+
+    // ── 卡片2：存款利息 ──
+    document.getElementById('deposit-steps').innerHTML =
+      `本金 = ${fmtMoney(X)} 万 × 10000 = <b>${fmtMoney(principal)}</b> 元<br>` +
+      `存款利息 = ${fmtMoney(principal)} × (${fmtPct(i)} ÷ 100) × ${Y}</b> = ` +
+      `${fmtMoney(principal)} × ${(i/100).toFixed(5)} × ${Y}`;
+    document.getElementById('deposit-result').textContent =
+      `= ${fmtMoney(depositInterest)} 元`;
+    document.getElementById('deposit-result').className = 'result positive';
+
+    // ── 卡片3：贴现成本 ──
+    document.getElementById('discount-steps').innerHTML =
+      `贴现利息 = ${fmtMoney(principal)} × (${fmtPct(j)} ÷ 100) × ${Y} = ` +
+      `${fmtMoney(principal)} × ${(j/100).toFixed(5)} × ${Y}`;
+    document.getElementById('discount-result').textContent =
+      `= ${fmtMoney(discountInterest)} 元`;
+    document.getElementById('discount-result').className = 'result negative';
+
+    const spreadClass = grossProfit >= 0 ? 'positive' : 'negative';
+    const spreadLabel = grossProfit >= 0 ? '盈利价差' : '倒挂亏损';
+    document.getElementById('spread-text').innerHTML =
+      `价差 = 存款利息 − 贴现利息 = ${fmtMoney(depositInterest)} − ${fmtMoney(discountInterest)} = <b>${fmtMoney(grossProfit)}</b> 元`;
+    const spreadResultEl = document.getElementById('spread-result');
+    spreadResultEl.textContent = grossProfit >= 0
+      ? `📈 ${spreadLabel}：+${fmtMoney(grossProfit)} 元`
+      : `📉 ${spreadLabel}：${fmtMoney(grossProfit)} 元`;
+    spreadResultEl.className = 'result ' + spreadClass;
+
+    // ── 卡片4：银行手续费 ──
+    document.getElementById('fees-steps').innerHTML =
+      `开票手续费 = ${fmtMoney(F1)} 元<br>贴现手续费 = ${fmtMoney(F2)} 元`;
+    document.getElementById('fees-result').textContent =
+      `合计手续费 = ${fmtMoney(totalFees)} 元`;
+
+    // ── 卡片5：拆借资金成本 ──
+    document.getElementById('bridge-steps').innerHTML =
+      `拆借本金 = ${fmtMoney(principal)} 元<br>` +
+      `拆借利息 = ${fmtMoney(principal)} × (${fmtPct(r)} ÷ 100) × ${z} 天 = ` +
+      `${fmtMoney(principal)} × ${(r/100).toFixed(5)} × ${z}`;
+    document.getElementById('bridge-result').textContent =
+      `= ${fmtMoney(bridgeCost)} 元`;
+    document.getElementById('bridge-result').className = 'result negative';
+
+    // ── 卡片6：公司运营成本 ──
+    document.getElementById('opex-steps').innerHTML =
+      `运营成本 = ${fmtMoney(principal)} × (${fmtPct(a)} ÷ 100)` +
+      ` = ${fmtMoney(principal)} × ${(a/100).toFixed(5)}`;
+    document.getElementById('opex-result').textContent =
+      `= ${fmtMoney(opexCost)} 元`;
+    document.getElementById('opex-result').className = 'result negative';
+
+    // ── 卡片7：城投公司补贴收入 ──
+    document.getElementById('subsidy-steps').innerHTML =
+      `补贴收入 = ${fmtMoney(principal)} × (${fmtPct(Z)} ÷ 100) × ${Y}` +
+      ` = ${fmtMoney(principal)} × ${(Z/100).toFixed(5)} × ${Y}`;
+    document.getElementById('subsidy-result').textContent =
+      `= +${fmtMoney(subsidyIncome)} 元`;
+    document.getElementById('subsidy-result').className = 'result positive';
+
+    // ── 卡片8：后置利息收入 ──
+    document.getElementById('deferred-steps').innerHTML =
+      `后置利息 = 存款利息 × (${fmtPct(H)} ÷ 100) × ${Y}<br>` +
+      `= ${fmtMoney(depositInterest)} × ${(H/100).toFixed(5)} × ${Y}`;
+    document.getElementById('deferred-result').textContent =
+      `= +${fmtMoney(deferredIncome)} 元`;
+    document.getElementById('deferred-result').className = 'result positive';
+
+    // ── 卡片9：净利润 ──
+    document.getElementById('profit-steps').innerHTML =
+      `净利润 = 价差 − 手续费 − 拆借成本 − 运营成本 + 补贴收入 + 后置利息<br>` +
+      `= ${fmtMoney(grossProfit)} − ${fmtMoney(totalFees)} − ${fmtMoney(bridgeCost)} − ${fmtMoney(opexCost)} + ${fmtMoney(subsidyIncome)} + ${fmtMoney(deferredIncome)}`;
+
+    const profitEl = document.getElementById('profit-result');
+    const annualEl = document.getElementById('profit-annual');
+    const cardProfit = document.getElementById('card-profit');
+
+    if (netProfit >= 0) {
+      profitEl.textContent = `✓ 套利盈利：+${fmtMoney(netProfit)} 元`;
+      profitEl.className = 'result positive';
+      annualEl.innerHTML = `年化收益率 = ${fmtMoney(netProfit)} ÷ ${fmtMoney(principal)} ÷ ${Y} × 100% = <span class="badge badge-profit">${fmtPct(annualReturn)}</span>`;
+      cardProfit.className = 'card card-profit profit-positive';
+    } else {
+      profitEl.textContent = `✗ 套利亏损：${fmtMoney(netProfit)} 元`;
+      profitEl.className = 'result negative';
+      annualEl.innerHTML = `年化收益率 = ${fmtMoney(netProfit)} ÷ ${fmtMoney(principal)} ÷ ${Y} × 100% = <span class="badge badge-loss">${fmtPct(annualReturn)}</span>`;
+      cardProfit.className = 'card card-profit profit-negative';
+    }
+  }
+
+  function clearResults() {
+    const ids = ['deposit-steps','deposit-result','discount-steps','discount-result',
+                 'spread-text','spread-result','fees-steps','fees-result',
+                 'bridge-steps','bridge-result','opex-steps','opex-result',
+                 'subsidy-steps','subsidy-result','deferred-steps','deferred-result',
+                 'profit-steps','profit-result','profit-annual'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '—'; });
+    document.getElementById('card-profit').className = 'card card-profit';
+    ['deposit-result','discount-result','spread-result','bridge-result','opex-result','subsidy-result','deferred-result','profit-result'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = '—'; el.className = 'result'; }
+    });
+  }
+
+  // ── 事件绑定 ──
+  allInputs.forEach(input => {
+    input.addEventListener('input', recalc);
+  });
+
+  // ── 初始计算 ──
+  recalc();
+})();
+</script>
+
+</body>
+</html>
