@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+推送触发.bat
+.DS_Store
