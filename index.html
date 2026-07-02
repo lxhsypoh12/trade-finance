@@ -448,7 +448,7 @@
   function sbUpdate(id,fields){return fetch(SB_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
   function sbDelete(ids){return fetch(SB_API+'?id=in.('+ids.map(function(x){return encodeURIComponent(x)}).join(',')+')',{method:'DELETE',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}})}
 
-  var BIZ_TYPES=['银承-回报','银承-供应链','信用证-回报','信用证-供应链','跑量/受托支付','存款','时点'];
+  var BIZ_TYPES=['银承-回报','银承-供应链','信用证-回报','信用证-供应链','跑量/受托支付','存款','时点','其他'];
   function bizTypeOpts(sel){var o='<option value=\"\">选择类型</option>';for(var i=0;i<BIZ_TYPES.length;i++)o+='<option value=\"'+BIZ_TYPES[i]+'\"'+(sel===BIZ_TYPES[i]?' selected':'')+'>'+BIZ_TYPES[i]+'</option>';return o}
   function escHtml(s){if(s===null||s===undefined)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 
