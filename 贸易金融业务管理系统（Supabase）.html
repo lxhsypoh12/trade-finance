@@ -589,7 +589,11 @@ document.getElementById(stage+'-save-status').style.display='none';
       if(!r)return;
       var todayStr=new Date().toISOString().split('T')[0];
       if(val==='已归档'&&!r.archive_date){r.archive_date=todayStr}
-      this.updateRecord(id,{archive_status:val,archive_date:r.archive_date||'',updated_at:new Date().toISOString()});
+      // 先同步更新缓存，确保渲染时读到最新值
+      r.archive_status=val;
+      r.updated_at=new Date().toISOString();
+      // 异步写 Supabase（失败不影响界面）
+      this.updateRecord(id,{archive_status:val,archive_date:r.archive_date||'',updated_at:r.updated_at});
       this.render('done');
     },
 
