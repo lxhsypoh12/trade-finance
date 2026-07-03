@@ -354,9 +354,42 @@
 <div id="view-stats-done" style="display:none">
   <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>✅ 完成阶段业务统计表</h1><p>Supabase 云端 · 多人共享 · 实时同步</p></div></div>
   <div class="stats-container"><div class="stats-toolbar"><div class="toolbar-left"><span style="color:#718096;font-size:13px" id="done-info"></span><span class="auto-save-indicator" id="done-save-status">已同步</span></div></div>
-    <div class="stats-table-wrapper"><table class="stats-table" id="done-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('done',this)"></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>时间<br>(年/月)</th><th>负责人</th><th>贸易方</th><th>实付成本<br>(万元)</th><th>实收金额<br>(万元)</th><th>实际利润<br>(万元)</th></tr></thead><tbody id="done-tbody"></tbody></table></div>
+    <div class="stats-table-wrapper"><table class="stats-table" id="done-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('done',this)"></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>时间<br>(年/月)</th><th>负责人</th><th>贸易方</th><th>实付成本<br>(万元)</th><th>实收金额<br>(万元)</th><th>实际利润<br>(万元)</th><th>归档状态</th><th>归档日期</th><th style="width:70px">资料</th></tr></thead><tbody id="done-tbody"></tbody></table></div>
     <div class="stats-actions"><button class="btn-action btn-danger" onclick="Stats.batchDelete('done')">🗑 删除选中</button><button class="btn-action btn-primary" onclick="Stats.exportPDF('done')">📥 导出PDF</button></div>
     <div class="stats-summary"><span class="total-profit">📊 公司总利润：<b id="total-profit">0.00</b> 万元</span></div>
+  </div>
+</div>
+
+<!-- ====== 资料清单弹窗 ====== -->
+<style>
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal-box{background:#fff;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.2);width:460px;max-height:80vh;overflow:auto;padding:0}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e2e8f0}
+.modal-header h3{font-size:15px;color:#1e3a5f;margin:0}
+.modal-close{font-size:20px;cursor:pointer;color:#a0aec0;background:none;border:none;padding:0 4px}
+.modal-close:hover{color:#e53e3e}
+.modal-body{padding:16px 20px}
+.material-item{display:flex;align-items:center;gap:10px;padding:8px 10px;margin-bottom:6px;background:#f7fafc;border-radius:6px;font-size:13px}
+.material-item .mat-check{accent-color:#38a169;width:16px;height:16px;cursor:pointer}
+.material-item .mat-name{flex:1;font-size:13px;color:#2d3748}
+.material-item .mat-del{font-size:12px;color:#e53e3e;cursor:pointer;background:none;border:none;padding:0 4px}
+.material-item .mat-del:hover{text-decoration:underline}
+.modal-add-row{display:flex;gap:8px;margin-top:10px}
+.modal-add-row input{flex:1;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;outline:none}
+.modal-add-row input:focus{border-color:#3182ce}
+.modal-add-row button{padding:7px 16px;background:#3182ce;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;white-space:nowrap}
+.modal-add-row button:hover{background:#2c5282}
+</style>
+<div class="modal-overlay" id="modal-materials">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>📎 项目存档资料清单</h3>
+      <button class="modal-close" onclick="Stats.closeMaterials()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-materials-body">
+      <div style="text-align:center;color:#a0aec0;padding:20px">加载中...</div>
+    </div>
   </div>
 </div>
 
@@ -476,8 +509,8 @@ document.getElementById(stage+'-save-status').style.display='none';
       }else if(stage==='done'){
         document.getElementById('done-info').textContent='共 '+data.length+' 条';
         var html='',totalProfit=0;
-        for(var i=0;i<data.length;i++){var r=data[i];var ap=(parseFloat(r.actual_revenue||0)-parseFloat(r.actual_cost||0));totalProfit+=ap;html+='<tr><td><input type=\"checkbox\" class=\"row-cb\" value=\"'+escHtml(r.id)+'\"></td><td><span class=\"readonly-cell\">'+escHtml(r.region||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.company||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.bank||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.amount||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.biz_type||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.time||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.person||'')+'</span></td><td><input type=\"text\" value=\"'+escHtml(r.trader||'')+'\" onblur=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'trader\',this.value)\"></td><td><input type=\"number\" value=\"'+escHtml(r.actual_cost||'')+'\" onblur=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'actual_cost\',this.value)\" step=\"0.01\"></td><td><input type=\"number\" value=\"'+escHtml(r.actual_revenue||'')+'\" onblur=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'actual_revenue\',this.value)\" step=\"0.01\"></td><td><span class=\"formula-cell\">'+ap.toFixed(2)+'</span></td></tr>'}
-        if(!data.length)html='<tr><td colspan=\"12\" class=\"empty-hint\">暂无记录</td></tr>';
+        for(var i=0;i<data.length;i++){var r=data[i];var ap=(parseFloat(r.actual_revenue||0)-parseFloat(r.actual_cost||0));totalProfit+=ap;var aStatus=r.archive_status||'未归档',aDate=r.archive_date||'',todayStr=new Date().toISOString().split('T')[0];html+='<tr><td><input type=\"checkbox\" class=\"row-cb\" value=\"'+escHtml(r.id)+'\"></td><td><span class=\"readonly-cell\">'+escHtml(r.region||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.company||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.bank||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.amount||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.biz_type||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.time||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.person||'')+'</span></td><td><input type=\"text\" value=\"'+escHtml(r.trader||'')+'\" onblur=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'trader\',this.value)\"></td><td><input type=\"number\" value=\"'+escHtml(r.actual_cost||'')+'\" onblur=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'actual_cost\',this.value)\" step=\"0.01\"></td><td><input type=\"number\" value=\"'+escHtml(r.actual_revenue||'')+'\" onblur=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'actual_revenue\',this.value)\" step=\"0.01\"></td><td><span class=\"formula-cell\">'+ap.toFixed(2)+'</span></td><td><select onchange=\"Stats.archiveStatusChange(\''+escHtml(r.id)+'\',this.value)\" style=\"font-size:11px;padding:3px 4px;border:1px solid '+(aStatus==='未归档'?'#e53e3e':'#38a169')+';border-radius:4px;background:'+(aStatus==='未归档'?'#fff5f5':'#f0fff4')+';cursor:pointer\"><option value=\"未归档\"'+(aStatus==='未归档'?' selected':'')+'>未归档</option><option value=\"已归档\"'+(aStatus==='已归档'?' selected':'')+'>已归档</option></select></td><td><input type=\"date\" value=\"'+escHtml(aDate)+'\" min=\"'+todayStr+'\" onchange=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'archive_date\',this.value)\" style=\"font-size:11px;padding:2px 4px;border:1px solid #e2e8f0;border-radius:4px;width:130px\"'+(aStatus!=='已归档'?' disabled':'')+'></td><td><button onclick=\"Stats.showMaterials(\''+escHtml(r.id)+'\')\" style=\"font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #cbd5e0;background:#fff;cursor:pointer\">📎资料</button></td></tr>'}
+        if(!data.length)html='<tr><td colspan=\"15\" class=\"empty-hint\">暂无记录</td></tr>';
         document.getElementById('done-tbody').innerHTML=html;
         document.getElementById('total-profit').textContent=totalProfit.toFixed(2);
       }
@@ -549,7 +582,66 @@ document.getElementById(stage+'-save-status').style.display='none';
 
     async migrateBidToWin(){var ids=this._getChecked('bid');if(!ids.length){alert('请勾选记录');return}var bids=this._cache['bid'],moved=[];for(var i=0;i<ids.length;i++){var r=bids.find(function(x){return x.id===ids[i]});if(r){r.stage='win';r.updated_at=new Date().toISOString();moved.push(r)}}if(!moved.length)return;await this.deleteRecords(ids);for(var i=0;i<moved.length;i++)delete moved[i].id;try{var result=await sbInsert(moved);if(result&&result.length)this._cache['win']=this._cache['win'].concat(result)}catch(e){this._cache['win']=this._cache['win'].concat(moved)}this._cache['bid']=this._cache['bid'].filter(function(r){return ids.indexOf(r.id)===-1});this.render('bid')},
 
-    async migrateWinToDone(){var ids=this._getChecked('win');if(!ids.length){alert('请勾选记录');return}var wins=this._cache['win'],moved=[];for(var i=0;i<ids.length;i++){var r=wins.find(function(x){return x.id===ids[i]});if(r){r.stage='done';r.updated_at=new Date().toISOString();moved.push(r)}}if(!moved.length)return;await this.deleteRecords(ids);for(var i=0;i<moved.length;i++)delete moved[i].id;try{var result=await sbInsert(moved);if(result&&result.length)this._cache['done']=this._cache['done'].concat(result)}catch(e){this._cache['done']=this._cache['done'].concat(moved)}this._cache['win']=this._cache['win'].filter(function(r){return ids.indexOf(r.id)===-1});this.render('win')}
+    async migrateWinToDone(){var ids=this._getChecked('win');if(!ids.length){alert('请勾选记录');return}var wins=this._cache['win'],moved=[];for(var i=0;i<ids.length;i++){var r=wins.find(function(x){return x.id===ids[i]});if(r){r.stage='done';r.archive_status='未归档';r.archive_date='';r.archive_note='[]';r.updated_at=new Date().toISOString();moved.push(r)}}if(!moved.length)return;await this.deleteRecords(ids);for(var i=0;i<moved.length;i++)delete moved[i].id;try{var result=await sbInsert(moved);if(result&&result.length)this._cache['done']=this._cache['done'].concat(result)}catch(e){this._cache['done']=this._cache['done'].concat(moved)}this._cache['win']=this._cache['win'].filter(function(r){return ids.indexOf(r.id)===-1});this.render('win')},
+
+    archiveStatusChange:function(id,val){
+      var r=this._cache['done'].find(function(x){return x.id===id});
+      if(!r)return;
+      var todayStr=new Date().toISOString().split('T')[0];
+      if(val==='已归档'&&!r.archive_date){r.archive_date=todayStr}
+      this.updateRecord(id,{archive_status:val,archive_date:r.archive_date||'',updated_at:new Date().toISOString()});
+      this.render('done');
+    },
+
+    showMaterials:function(id){
+      var r=this._cache['done'].find(function(x){return x.id===id});
+      if(!r)return;
+      var items=[];
+      try{items=JSON.parse(r.archive_note||'[]')}catch(e){items=[]}
+      var body=document.getElementById('modal-materials-body');
+      var html='';
+      for(var i=0;i<items.length;i++){
+        html+='<div class="material-item"><input type="checkbox" class="mat-check"'+(items[i].done?' checked':'')+' onchange="Stats.toggleMaterial(\''+escHtml(id)+'\','+i+',this.checked)"><span class="mat-name">'+escHtml(items[i].name)+'</span><button class="mat-del" onclick="Stats.removeMaterial(\''+escHtml(id)+'\','+i+')">✕</button></div>';
+      }
+      if(!items.length)html='<div style="text-align:center;color:#a0aec0;padding:16px">暂无资料，请在下方添加</div>';
+      html+='<div class="modal-add-row"><input type="text" id="mat-input" placeholder="输入资料名称，按回车添加" onkeydown="if(event.key===\'Enter\')Stats.addMaterial(\''+escHtml(id)+'\')"><button onclick="Stats.addMaterial(\''+escHtml(id)+'\')">+ 添加</button></div>';
+      body.innerHTML=html;
+      document.getElementById('modal-materials').className='modal-overlay active';
+    },
+
+    closeMaterials:function(){document.getElementById('modal-materials').className='modal-overlay'},
+
+    addMaterial:function(id){
+      var input=document.getElementById('mat-input');
+      var name=input.value.trim();
+      if(!name)return;
+      var r=this._cache['done'].find(function(x){return x.id===id});
+      if(!r)return;
+      var items=[];try{items=JSON.parse(r.archive_note||'[]')}catch(e){items=[]}
+      items.push({name:name,done:false});
+      r.archive_note=JSON.stringify(items);
+      this.updateRecord(id,{archive_note:r.archive_note,updated_at:new Date().toISOString()});
+      this.showMaterials(id);
+    },
+
+    removeMaterial:function(id,idx){
+      var r=this._cache['done'].find(function(x){return x.id===id});
+      if(!r)return;
+      var items=[];try{items=JSON.parse(r.archive_note||'[]')}catch(e){items=[]}
+      items.splice(idx,1);
+      r.archive_note=JSON.stringify(items);
+      this.updateRecord(id,{archive_note:r.archive_note,updated_at:new Date().toISOString()});
+      this.showMaterials(id);
+    },
+
+    toggleMaterial:function(id,idx,checked){
+      var r=this._cache['done'].find(function(x){return x.id===id});
+      if(!r)return;
+      var items=[];try{items=JSON.parse(r.archive_note||'[]')}catch(e){items=[]}
+      items[idx].done=checked;
+      r.archive_note=JSON.stringify(items);
+      this.updateRecord(id,{archive_note:r.archive_note,updated_at:new Date().toISOString()});
+    }
   };
 
   // ===== 初始化 =====
