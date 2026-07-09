@@ -582,18 +582,17 @@ document.getElementById(stage+'-save-status').style.display='none';
 
     async migrateBidToWin(){var ids=this._getChecked('bid');if(!ids.length){alert('请勾选记录');return}var bids=this._cache['bid'],moved=[];for(var i=0;i<ids.length;i++){var r=bids.find(function(x){return x.id===ids[i]});if(r){r.stage='win';r.updated_at=new Date().toISOString();moved.push(r)}}if(!moved.length)return;await this.deleteRecords(ids);for(var i=0;i<moved.length;i++)delete moved[i].id;try{var result=await sbInsert(moved);if(result&&result.length)this._cache['win']=this._cache['win'].concat(result)}catch(e){this._cache['win']=this._cache['win'].concat(moved)}this._cache['bid']=this._cache['bid'].filter(function(r){return ids.indexOf(r.id)===-1});this.render('bid')},
 
-    async migrateWinToDone(){var ids=this._getChecked('win');if(!ids.length){alert('请勾选记录');return}var wins=this._cache['win'],moved=[];for(var i=0;i<ids.length;i++){var r=wins.find(function(x){return x.id===ids[i]});if(r){r.stage='done';r.archive_status='未归档';r.archive_date='';r.archive_note='[]';r.updated_at=new Date().toISOString();moved.push(r)}}if(!moved.length)return;await this.deleteRecords(ids);for(var i=0;i<moved.length;i++)delete moved[i].id;try{var result=await sbInsert(moved);if(result&&result.length)this._cache['done']=this._cache['done'].concat(result)}catch(e){this._cache['done']=this._cache['done'].concat(moved)}this._cache['win']=this._cache['win'].filter(function(r){return ids.indexOf(r.id)===-1});this.render('win')},
+    async migrateWinToDone(){var ids=this._getChecked('win');if(!ids.length){alert('请勾选记录');return}var wins=this._cache['win'],moved=[];for(var i=0;i<ids.length;i++){var r=wins.find(function(x){return x.id===ids[i]});if(r){var nr={};for(var k in r)nr[k]=r[k];nr.stage='done';nr.archive_status='未归档';nr.archive_date='';nr.archive_note='[]';nr.updated_at=new Date().toISOString();moved.push(nr)}}if(!moved.length)return;await this.deleteRecords(ids);for(var i=0;i<moved.length;i++){delete moved[i].id}try{var result=await sbInsert(moved);if(result&&result.length){this._cache['done']=this._cache['done'].concat(result);this._cache['win']=this._cache['win'].filter(function(r){return ids.indexOf(r.id)===-1});this.render('win');this.render('done')}else{alert('迁移失败：部分记录无法写入，请检查Supabase表是否已添加archive_status/archive_date/archive_note列')}}catch(e){alert('迁移出错：'+e.message+'\n请确认Supabase表已添加归档相关列')}},
 
-    archiveStatusChange:function(id,val){
+    async archiveStatusChange(id,val){
       var r=this._cache['done'].find(function(x){return x.id===id});
       if(!r)return;
       var todayStr=new Date().toISOString().split('T')[0];
       if(val==='已归档'&&!r.archive_date){r.archive_date=todayStr}
-      // 先同步更新缓存，确保渲染时读到最新值
       r.archive_status=val;
       r.updated_at=new Date().toISOString();
-      // 异步写 Supabase（失败不影响界面）
-      this.updateRecord(id,{archive_status:val,archive_date:r.archive_date||'',updated_at:r.updated_at});
+      // 必须先写入 Supabase 再渲染，否则 render 会从 Supabase 拉回旧数据覆盖缓存
+      await this.updateRecord(id,{archive_status:val,archive_date:r.archive_date||'',updated_at:r.updated_at});
       this.render('done');
     },
 
@@ -615,7 +614,7 @@ document.getElementById(stage+'-save-status').style.display='none';
 
     closeMaterials:function(){document.getElementById('modal-materials').className='modal-overlay'},
 
-    addMaterial:function(id){
+    addMaterial:async function(id){
       var input=document.getElementById('mat-input');
       var name=input.value.trim();
       if(!name)return;
@@ -624,27 +623,27 @@ document.getElementById(stage+'-save-status').style.display='none';
       var items=[];try{items=JSON.parse(r.archive_note||'[]')}catch(e){items=[]}
       items.push({name:name,done:false});
       r.archive_note=JSON.stringify(items);
-      this.updateRecord(id,{archive_note:r.archive_note,updated_at:new Date().toISOString()});
+      await this.updateRecord(id,{archive_note:r.archive_note,updated_at:new Date().toISOString()});
       this.showMaterials(id);
     },
 
-    removeMaterial:function(id,idx){
+    removeMaterial:async function(id,idx){
       var r=this._cache['done'].find(function(x){return x.id===id});
       if(!r)return;
       var items=[];try{items=JSON.parse(r.archive_note||'[]')}catch(e){items=[]}
       items.splice(idx,1);
       r.archive_note=JSON.stringify(items);
-      this.updateRecord(id,{archive_note:r.archive_note,updated_at:new Date().toISOString()});
+      await this.updateRecord(id,{archive_note:r.archive_note,updated_at:new Date().toISOString()});
       this.showMaterials(id);
     },
 
-    toggleMaterial:function(id,idx,checked){
+    toggleMaterial:async function(id,idx,checked){
       var r=this._cache['done'].find(function(x){return x.id===id});
       if(!r)return;
       var items=[];try{items=JSON.parse(r.archive_note||'[]')}catch(e){items=[]}
       items[idx].done=checked;
       r.archive_note=JSON.stringify(items);
-      this.updateRecord(id,{archive_note:r.archive_note,updated_at:new Date().toISOString()});
+      await this.updateRecord(id,{archive_note:r.archive_note,updated_at:new Date().toISOString()});
     }
   };
 
