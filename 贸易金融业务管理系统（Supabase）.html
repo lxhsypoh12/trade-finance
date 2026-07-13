@@ -244,7 +244,7 @@
       <div class="home-card card-stats-bid" onclick="showView('stats-bid')"><div class="icon">📝</div><h2>投标阶段</h2><p>区域 / 城投 / 金融机构 / 业务规模 / 类型</p></div>
       <div class="home-card card-stats-win" onclick="showView('stats-win')"><div class="icon">🏆</div><h2>中标阶段</h2><p>贸易方 / 成本 / 费率 / 报价 / 利润</p></div>
       <div class="home-card card-stats-done" onclick="showView('stats-done')"><div class="icon">✅</div><h2>完成阶段</h2><p>实付成本 / 实收金额 / 实际利润</p></div>
-      <div class="home-card card-stats-loan" onclick="showView('stats-loan')"><div class="icon">💰</div><h2>自营贸易子公司贷款类业务汇总</h2><p>贷款到期跟踪 / 颜色预警 / 飞书提醒</p></div>
+      <div class="home-card card-stats-loan" onclick="showView('stats-loan')"><div class="icon">💰</div><h2>贸易子公司贷款类业务统计</h2><p>贷款到期跟踪 / 颜色预警 / 飞书提醒</p></div>
     </div>
   </div>
 </div>
@@ -379,7 +379,7 @@
 
 <!-- ====== 视图：贷款业务统计表 ====== -->
 <div id="view-stats-loan" style="display:none">
-  <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>💰 自营贸易子公司贷款类业务汇总</h1><p>Supabase 云端 · 到期颜色预警 · 飞书日报自动提醒</p></div></div>
+  <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>💰 贸易子公司贷款类业务统计</h1><p>Supabase 云端 · 到期颜色预警 · 飞书日报自动提醒</p></div></div>
   <div class="stats-container">
     <div class="stats-toolbar">
       <div class="toolbar-left">
@@ -801,7 +801,7 @@ document.getElementById(stage+'-save-status').style.display='none';
       var btns=el.querySelectorAll('.btn-action,.loan-action-btn');
       var printTitle=document.createElement('h2');
       printTitle.id='print-title-temp';
-      printTitle.textContent='自营贸易子公司贷款类业务汇总';
+      printTitle.textContent='贸易子公司贷款类业务统计';
       printTitle.style.cssText='text-align:center;font-size:18px;margin:12px 0 16px;color:#1e3a5f;';
       el.insertBefore(printTitle,el.firstChild);
       for(var i=0;i<btns.length;i++)btns[i].style.display='none';
