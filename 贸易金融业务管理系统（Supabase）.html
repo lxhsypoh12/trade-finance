@@ -87,6 +87,7 @@
   .home-card.card-stats-bid  { border-top-color: #e53e3e; }
   .home-card.card-stats-win  { border-top-color: #dd6b20; }
   .home-card.card-stats-done { border-top-color: #38a169; }
+  .home-card.card-stats-loan { border-top-color: #d69e2e; }
   .home-card .icon { font-size: 48px; margin-bottom: 16px; }
   .home-card h2 { font-size: 18px; color: #2d3748; margin-bottom: 8px; }
   .home-card p  { font-size: 13px; color: #718096; line-height: 1.6; }
@@ -243,6 +244,7 @@
       <div class="home-card card-stats-bid" onclick="showView('stats-bid')"><div class="icon">📝</div><h2>投标阶段</h2><p>区域 / 城投 / 金融机构 / 业务规模 / 类型</p></div>
       <div class="home-card card-stats-win" onclick="showView('stats-win')"><div class="icon">🏆</div><h2>中标阶段</h2><p>贸易方 / 成本 / 费率 / 报价 / 利润</p></div>
       <div class="home-card card-stats-done" onclick="showView('stats-done')"><div class="icon">✅</div><h2>完成阶段</h2><p>实付成本 / 实收金额 / 实际利润</p></div>
+      <div class="home-card card-stats-loan" onclick="showView('stats-loan')"><div class="icon">💰</div><h2>自营贸易子公司贷款类业务汇总</h2><p>贷款到期跟踪 / 颜色预警 / 飞书提醒</p></div>
     </div>
   </div>
 </div>
@@ -336,6 +338,21 @@
 .stats-summary .total-profit{background:#f0fff4;border:2px solid #38a169;padding:10px 24px;border-radius:8px;color:#276749;font-size:18px}
 .empty-hint{text-align:center;color:#a0aec0;padding:40px!important;font-size:13px}
 .auto-save-indicator{font-size:11px;color:#38a169;display:none}
+.loan-row-green{background:#c6f6d5!important}
+.loan-row-yellow{background:#fefcbf!important}
+.loan-row-red{background:#fed7d7!important}
+.loan-row-green:hover,.loan-row-yellow:hover,.loan-row-red:hover{filter:brightness(0.96)}
+.stats-table input[type="date"]{width:100%;min-width:110px;padding:4px 5px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;text-align:center;font-family:inherit;background:#fff;transition:border-color 0.2s}
+.stats-table input[type="date"]:focus{border-color:#3182ce;outline:none;box-shadow:0 0 0 2px rgba(49,130,206,0.12)}
+.loan-action-btn{padding:3px 8px;border:none;border-radius:4px;font-size:11px;cursor:pointer;margin:0 1px;transition:background 0.2s;font-family:inherit}
+.loan-edit-btn{background:#ebf8ff;color:#2b6cb0}
+.loan-edit-btn:hover{background:#bee3f8}
+.loan-save-btn{background:#f0fff4;color:#276749}
+.loan-save-btn:hover{background:#c6f6d5}
+.loan-del-btn{background:#fff5f5;color:#c53030}
+.loan-del-btn:hover{background:#fed7d7}
+.loan-color-legend{display:flex;gap:14px;align-items:center;font-size:11px;color:#718096}
+.loan-color-dot{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:3px}
 </style>
 <div id="view-stats-bid" style="display:none">
   <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>📝 投标阶段业务统计表</h1><p>Supabase 云端 · 多人共享 · 实时同步</p></div></div>
@@ -357,6 +374,23 @@
     <div class="stats-table-wrapper"><table class="stats-table" id="done-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('done',this)"></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>时间<br>(年/月)</th><th>负责人</th><th>贸易方</th><th>实付成本<br>(万元)</th><th>实收金额<br>(万元)</th><th>实际利润<br>(万元)</th><th>归档状态</th><th>归档日期</th><th style="width:70px">资料</th></tr></thead><tbody id="done-tbody"></tbody></table></div>
     <div class="stats-actions"><button class="btn-action btn-danger" onclick="Stats.batchDelete('done')">🗑 删除选中</button><button class="btn-action btn-primary" onclick="Stats.exportPDF('done')">📥 导出PDF</button></div>
     <div class="stats-summary"><span class="total-profit">📊 公司总利润：<b id="total-profit">0.00</b> 万元</span></div>
+  </div>
+</div>
+
+<!-- ====== 视图：贷款业务统计表 ====== -->
+<div id="view-stats-loan" style="display:none">
+  <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>💰 自营贸易子公司贷款类业务汇总</h1><p>Supabase 云端 · 到期颜色预警 · 飞书日报自动提醒</p></div></div>
+  <div class="stats-container">
+    <div class="stats-toolbar">
+      <div class="toolbar-left">
+        <span style="color:#718096;font-size:13px" id="loan-info"></span>
+        <span class="auto-save-indicator" id="loan-save-status">已同步</span>
+        <span class="loan-color-legend"><span><span class="loan-color-dot" style="background:#c6f6d5"></span>&gt;2个月</span><span><span class="loan-color-dot" style="background:#fefcbf"></span>≤2个月</span><span><span class="loan-color-dot" style="background:#fed7d7"></span>≤1个月</span></span>
+      </div>
+      <button class="btn-action btn-add" onclick="LoanStats.addRecord()">＋ 添加记录</button>
+    </div>
+    <div class="stats-table-wrapper"><table class="stats-table" id="loan-table"><thead><tr><th style="width:80px">操作</th><th>贸易公司名称</th><th>银行名称</th><th>区域</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>起始日</th><th>到期日</th><th>备注</th></tr></thead><tbody id="loan-tbody"></tbody></table></div>
+    <div class="stats-actions"><button class="btn-action btn-primary" onclick="LoanStats.exportPDF()">📥 导出PDF</button></div>
   </div>
 </div>
 
@@ -411,7 +445,7 @@
   function fmtPct(v){return v.toFixed(3)+'%';}
 
   window.showView=function(view){
-    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done')};
+    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done'),loan:document.getElementById('view-stats-loan')};
     Object.values(els).forEach(function(e){if(e)e.style.display='none';});
     if(view==='home'){saveInputs(currentCalcType);els.home.style.display='block';}
     else if(view==='bill'||view==='lc'){saveInputs(currentCalcType);currentCalcType=view;applyLabels(view);restoreInputs(view);els.calc.style.display='block';recalc();}
@@ -419,6 +453,7 @@
     else if(view==='stats-bid'){if(els.bid){els.bid.style.display='block';Stats.render('bid');}}
     else if(view==='stats-win'){if(els.win){els.win.style.display='block';Stats.render('win');}}
     else if(view==='stats-done'){if(els.done){els.done.style.display='block';Stats.render('done');}}
+    else if(view==='stats-loan'){if(els.loan){els.loan.style.display='block';LoanStats.render();}}
   };
 
   function saveInputs(type){var s={};allInputs.forEach(function(el){s[el.id]=el.value;});inputState[type]=s;}
@@ -647,10 +682,146 @@ document.getElementById(stage+'-save-status').style.display='none';
     }
   };
 
+  // ===== Supabase 贷款业务 CRUD =====
+  var LOAN_API='https://jpcjwhyotcrhxstzwzid.supabase.co/rest/v1/loan_businesses';
+  var LOAN_KEY=SB_KEY;
+  function loanGetAll(){return fetch(LOAN_API+'?order=due_date.asc',{headers:{apikey:LOAN_KEY,Authorization:'Bearer '+LOAN_KEY}}).then(function(r){return r.json()})}
+  function loanInsert(records){return fetch(LOAN_API,{method:'POST',headers:{apikey:LOAN_KEY,Authorization:'Bearer '+LOAN_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(records)}).then(function(r){return r.json()})}
+  function loanUpdate(id,fields){return fetch(LOAN_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:LOAN_KEY,Authorization:'Bearer '+LOAN_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
+  function loanDelete(id){return fetch(LOAN_API+'?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{apikey:LOAN_KEY,Authorization:'Bearer '+LOAN_KEY}})}
+
+  var LOAN_BIZ_TYPES=['商票质押贷款','存单质押贷款','其他'];
+  function loanBizTypeOpts(sel){var o='<option value="">选择类型</option>';for(var i=0;i<LOAN_BIZ_TYPES.length;i++)o+='<option value="'+LOAN_BIZ_TYPES[i]+'"'+(sel===LOAN_BIZ_TYPES[i]?' selected':'')+'>'+LOAN_BIZ_TYPES[i]+'</option>';return o}
+
+  function loanRowColor(dueDate){
+    if(!dueDate)return'';
+    var today=new Date();today.setHours(0,0,0,0);
+    var due=new Date(dueDate);due.setHours(0,0,0,0);
+    var diffDays=Math.round((due-today)/(1000*60*60*24));
+    if(diffDays<0)return'loan-row-red';
+    var dueMonth=new Date(today);dueMonth.setMonth(dueMonth.getMonth()+1);
+    var due2Month=new Date(today);due2Month.setMonth(due2Month.getMonth()+2);
+    if(due<=dueMonth)return'loan-row-red';
+    if(due<=due2Month)return'loan-row-yellow';
+    return'loan-row-green';
+  }
+
+  var LoanStats={
+    _cache:[],
+    _editing:null,
+
+    async load(){
+      try{this._cache=await loanGetAll()||[]}catch(e){this._cache=[]}
+    },
+
+    async render(){
+      document.getElementById('loan-save-status').style.display='none';
+      await this.load();
+      var data=this._cache;
+      document.getElementById('loan-info').textContent='共 '+data.length+' 条';
+      var tbody=document.getElementById('loan-tbody');
+      if(!data.length){
+        tbody.innerHTML='<tr><td colspan="9" class="empty-hint">暂无记录，点击「＋ 添加记录」开始</td></tr>';
+        return;
+      }
+      var html='';
+      for(var i=0;i<data.length;i++){
+        var r=data[i];
+        var colorClass=loanRowColor(r.due_date);
+        var isEditing=this._editing===r.id;
+        html+='<tr class="'+colorClass+'">';
+        if(isEditing){
+          html+='<td><button class="loan-action-btn loan-save-btn" onclick="LoanStats.saveEdit('+r.id+')">💾 保存</button><button class="loan-action-btn loan-del-btn" onclick="LoanStats.cancelEdit()">✕</button></td>';
+          html+='<td><input type="text" id="loan-edit-companyName" value="'+escHtml(r.company_name||'')+'"></td>';
+          html+='<td><input type="text" id="loan-edit-bankName" value="'+escHtml(r.bank_name||'')+'"></td>';
+          html+='<td><input type="text" id="loan-edit-region" value="'+escHtml(r.region||'')+'"></td>';
+          html+='<td><input type="number" id="loan-edit-amount" value="'+escHtml(r.amount||'')+'" step="0.01" style="min-width:80px"></td>';
+          html+='<td><select id="loan-edit-bizType">'+loanBizTypeOpts(r.biz_type)+'</select></td>';
+          html+='<td><input type="date" id="loan-edit-startDate" value="'+escHtml(r.start_date||'')+'"></td>';
+          html+='<td><input type="date" id="loan-edit-dueDate" value="'+escHtml(r.due_date||'')+'"></td>';
+          html+='<td><input type="text" id="loan-edit-remark" value="'+escHtml(r.remark||'')+'"></td>';
+        }else{
+          html+='<td><button class="loan-action-btn loan-edit-btn" onclick="LoanStats.startEdit('+r.id+')">📝 编辑</button><button class="loan-action-btn loan-del-btn" onclick="LoanStats.deleteRecord('+r.id+')">🗑 删除</button></td>';
+          html+='<td>'+escHtml(r.company_name||'')+'</td>';
+          html+='<td>'+escHtml(r.bank_name||'')+'</td>';
+          html+='<td>'+escHtml(r.region||'')+'</td>';
+          html+='<td>'+escHtml(r.amount||'')+'</td>';
+          html+='<td>'+escHtml(r.biz_type||'')+'</td>';
+          html+='<td>'+escHtml(r.start_date||'')+'</td>';
+          html+='<td>'+escHtml(r.due_date||'')+'</td>';
+          html+='<td>'+escHtml(r.remark||'')+'</td>';
+        }
+        html+='</tr>';
+      }
+      tbody.innerHTML=html;
+      document.getElementById('loan-save-status').textContent='已同步';
+      document.getElementById('loan-save-status').style.display='inline';
+    },
+
+    startEdit(id){this._editing=id;this.render()},
+    cancelEdit(){this._editing=null;this.render()},
+
+    async saveEdit(id){
+      var fields={
+        company_name:document.getElementById('loan-edit-companyName').value.trim(),
+        bank_name:document.getElementById('loan-edit-bankName').value.trim(),
+        region:document.getElementById('loan-edit-region').value.trim(),
+        amount:parseFloat(document.getElementById('loan-edit-amount').value)||0,
+        biz_type:document.getElementById('loan-edit-bizType').value,
+        start_date:document.getElementById('loan-edit-startDate').value||null,
+        due_date:document.getElementById('loan-edit-dueDate').value||null,
+        remark:document.getElementById('loan-edit-remark').value.trim()
+      };
+      try{await loanUpdate(id,fields)}catch(e){alert('保存失败：'+e.message)}
+      this._editing=null;
+      this.render();
+    },
+
+    async addRecord(){
+      var record={company_name:'',bank_name:'',region:'',amount:0,biz_type:'',start_date:null,due_date:null,remark:''};
+      try{var result=await loanInsert(record);if(result&&result[0])record=result[0]}catch(e){alert('添加失败：'+e.message);return}
+      record.id=record.id||('local_'+Date.now());
+      this._editing=record.id;
+      this.render();
+    },
+
+    async deleteRecord(id){
+      if(!confirm('确认删除此条贷款记录？\n（此操作不可恢复）'))return;
+      try{await loanDelete(id)}catch(e){alert('删除失败：'+e.message)}
+      this._cache=this._cache.filter(function(r){return r.id!==id});
+      if(this._editing===id)this._editing=null;
+      this.render();
+    },
+
+    exportPDF(){
+      var t=new Date(),ds=t.getFullYear()+String(t.getMonth()+1).padStart(2,'0')+String(t.getDate()).padStart(2,'0');
+      document.title='贷款业务统计_'+ds;
+      var el=document.getElementById('view-stats-loan');
+      var others=['view-home','view-calc','view-quote','view-stats-bid','view-stats-win','view-stats-done'];
+      var btns=el.querySelectorAll('.btn-action,.loan-action-btn');
+      var printTitle=document.createElement('h2');
+      printTitle.id='print-title-temp';
+      printTitle.textContent='自营贸易子公司贷款类业务汇总';
+      printTitle.style.cssText='text-align:center;font-size:18px;margin:12px 0 16px;color:#1e3a5f;';
+      el.insertBefore(printTitle,el.firstChild);
+      for(var i=0;i<btns.length;i++)btns[i].style.display='none';
+      for(var i=0;i<others.length;i++){var oe=document.getElementById(others[i]);if(oe)oe.style.display='none'}
+      el.style.display='block';
+      window.print();
+      setTimeout(function(){
+        if(printTitle.parentNode)printTitle.parentNode.removeChild(printTitle);
+        for(var i=0;i<btns.length;i++)btns[i].style.display='';
+        el.style.display='none';
+        document.title='贸易金融业务管理系统（Supabase）';
+      },500);
+    }
+  };
+
   // ===== 初始化 =====
   allInputs.forEach(function(input){input.addEventListener('input',recalc);});
   qAllInputs.forEach(function(input){input.addEventListener('input',recalcQuote);});
   window.Stats = Stats;
+  window.LoanStats = LoanStats;
   if(qElType)qElType.addEventListener('change',recalcQuote);
   applyLabels('bill');
   showView('home');

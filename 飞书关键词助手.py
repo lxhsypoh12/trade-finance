@@ -8,6 +8,8 @@ SB_URL = "https://jpcjwhyotcrhxstzwzid.supabase.co/rest/v1/trade_stats"
 SB_KEY = os.environ.get("FEISHU_SUPABASE_KEY", "")
 HEADERS = {"apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY}
 
+LOAN_URL = "https://jpcjwhyotcrhxstzwzid.supabase.co/rest/v1/loan_businesses"
+
 def 查询(stage):
     r = requests.get(f"{SB_URL}?stage=eq.{stage}&order=created_at.desc", headers=HEADERS)
     return r.json() if r.status_code == 200 else []
@@ -76,11 +78,56 @@ def 查全部():
     ]
     return 发卡片("贸易项目总览（三阶段）", "今日项目统计", 列表)
 
+def 查贷款到期():
+    """查询2个月内即将到期的贷款业务，推送飞书提醒"""
+    today = datetime.date.today()
+    two_months_later = today + datetime.timedelta(days=61)  # ~2个月
+    try:
+        r = requests.get(
+            f"{LOAN_URL}?due_date=gte.{today.isoformat()}&due_date=lte.{two_months_later.isoformat()}&order=due_date.asc",
+            headers=HEADERS
+        )
+        data = r.json() if r.status_code == 200 else []
+    except Exception:
+        data = []
+
+    if not data:
+        return 发卡片("💰 贷款到期提醒", "目前 **无** 2个月内到期的贷款。✅", [])
+
+    # 分类：紧急（≤1个月）和关注（≤2个月）
+    紧急 = []
+    关注 = []
+    one_month_later = today + datetime.timedelta(days=31)
+    for rec in data:
+        due_str = rec.get("due_date", "")
+        try:
+            due_date = datetime.date.fromisoformat(due_str)
+        except (ValueError, TypeError):
+            continue
+        剩余天数 = (due_date - today).days
+        行 = f"• {rec.get('company_name','-')} | {rec.get('bank_name','-')} | {rec.get('biz_type','-')} | {rec.get('amount','-')}万 | 到期：{due_str} | 剩余{剩余天数}天"
+        if due_date <= one_month_later:
+            紧急.append(行)
+        else:
+            关注.append(行)
+
+    列表行 = []
+    if 紧急:
+        列表行.append("**🔴 紧急（≤1个月）：**")
+        列表行.extend(紧急)
+    if 关注:
+        if 列表行: 列表行.append("")
+        列表行.append("**🟡 关注（≤2个月）：**")
+        列表行.extend(关注)
+
+    return 发卡片("💰 贷款到期提醒（2个月内）", f"共 **{len(data)}** 笔即将到期", 列表行)
+
 关键词路由 = {
     "投标": 查投标,
     "中标": 查中标,
     "完成": 查完成,
     "汇总": 查全部,
+    "贷款": 查贷款到期,
 }
 
 if __name__ == "__main__":
