@@ -389,7 +389,7 @@
       </div>
       <button class="btn-action btn-add" onclick="LoanStats.addRecord()">＋ 添加记录</button>
     </div>
-    <div class="stats-table-wrapper"><table class="stats-table" id="loan-table"><thead><tr><th style="width:80px">操作</th><th>贸易公司名称</th><th>银行名称</th><th>区域</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>起始日</th><th>到期日</th><th>备注</th></tr></thead><tbody id="loan-tbody"></tbody></table></div>
+    <div class="stats-table-wrapper"><table class="stats-table" id="loan-table"><thead><tr><th style="width:80px">操作</th><th>贸易公司名称</th><th>银行名称</th><th>区域</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>起始日</th><th>到期日</th><th>负责人</th><th>备注</th></tr></thead><tbody id="loan-tbody"></tbody></table></div>
     <div class="stats-actions"><button class="btn-action btn-primary" onclick="LoanStats.exportPDF()">📥 导出PDF</button></div>
   </div>
 </div>
@@ -721,7 +721,7 @@ document.getElementById(stage+'-save-status').style.display='none';
       document.getElementById('loan-info').textContent='共 '+data.length+' 条';
       var tbody=document.getElementById('loan-tbody');
       if(!data.length){
-        tbody.innerHTML='<tr><td colspan="9" class="empty-hint">暂无记录，点击「＋ 添加记录」开始</td></tr>';
+        tbody.innerHTML='<tr><td colspan="10" class="empty-hint">暂无记录，点击「＋ 添加记录」开始</td></tr>';
         return;
       }
       var html='';
@@ -739,6 +739,7 @@ document.getElementById(stage+'-save-status').style.display='none';
           html+='<td><select id="loan-edit-bizType">'+loanBizTypeOpts(r.biz_type)+'</select></td>';
           html+='<td><input type="date" id="loan-edit-startDate" value="'+escHtml(r.start_date||'')+'"></td>';
           html+='<td><input type="date" id="loan-edit-dueDate" value="'+escHtml(r.due_date||'')+'"></td>';
+          html+='<td><input type="text" id="loan-edit-owner" value="'+escHtml(r.owner||'')+'"></td>';
           html+='<td><input type="text" id="loan-edit-remark" value="'+escHtml(r.remark||'')+'"></td>';
         }else{
           html+='<td><button class="loan-action-btn loan-edit-btn" onclick="LoanStats.startEdit('+r.id+')">📝 编辑</button><button class="loan-action-btn loan-del-btn" onclick="LoanStats.deleteRecord('+r.id+')">🗑 删除</button></td>';
@@ -749,6 +750,7 @@ document.getElementById(stage+'-save-status').style.display='none';
           html+='<td>'+escHtml(r.biz_type||'')+'</td>';
           html+='<td>'+escHtml(r.start_date||'')+'</td>';
           html+='<td>'+escHtml(r.due_date||'')+'</td>';
+          html+='<td>'+escHtml(r.owner||'')+'</td>';
           html+='<td>'+escHtml(r.remark||'')+'</td>';
         }
         html+='</tr>';
@@ -770,6 +772,7 @@ document.getElementById(stage+'-save-status').style.display='none';
         biz_type:document.getElementById('loan-edit-bizType').value,
         start_date:document.getElementById('loan-edit-startDate').value||null,
         due_date:document.getElementById('loan-edit-dueDate').value||null,
+        owner:document.getElementById('loan-edit-owner').value.trim(),
         remark:document.getElementById('loan-edit-remark').value.trim()
       };
       try{await loanUpdate(id,fields)}catch(e){alert('保存失败：'+e.message)}
@@ -778,7 +781,7 @@ document.getElementById(stage+'-save-status').style.display='none';
     },
 
     async addRecord(){
-      var record={company_name:'',bank_name:'',region:'',amount:0,biz_type:'',start_date:null,due_date:null,remark:''};
+      var record={company_name:'',bank_name:'',region:'',amount:0,biz_type:'',start_date:null,due_date:null,owner:'',remark:''};
       try{var result=await loanInsert(record);if(result&&result[0])record=result[0]}catch(e){alert('添加失败：'+e.message);return}
       record.id=record.id||('local_'+Date.now());
       this._editing=record.id;
