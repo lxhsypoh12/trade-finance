@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-公司贸易金融业务管理系统，覆盖业务计算器、三阶段业务统计（投标/中标/完成）、贸易子公司贷款类业务统计，以及飞书每日 18:00 自动日报推送。
+公司贸易金融业务管理系统，覆盖业务计算器、三阶段业务统计（投标/中标/完成）、贸易子公司贷款类业务统计、贸易子公司统计，以及飞书每日 18:00 自动日报推送。
 
 ## 文件结构
 
@@ -29,6 +29,7 @@
 - 匿名 Key（公开安全）：`sb_publishable_hE4GbUYp-NYiD1SYBvw0wg_yUNtV6Bg`
 - **trade_stats 表**：三阶段统计共用，`stage` 字段区分（`bid`/`win`/`done`）
 - **loan_businesses 表**：贷款业务独立表（独立统计、独立通知）
+- **subsidiary_companies 表**：贸易子公司信息汇总表（独立统计，仅查看，不推送飞书日报）
 
 ### REST API 封装（HTML 中）
 ```js
@@ -41,6 +42,11 @@ loanGetAll()       // GET  loan_businesses?order=due_date.asc
 loanInsert(records)// POST loan_businesses
 loanUpdate(id,fields)// PATCH loan_businesses?id=eq.{id}
 loanDelete(id)     // DELETE loan_businesses?id=eq.{id}
+
+subsidiaryGetAll()       // GET  subsidiary_companies?order=company_name.asc
+subsidiaryInsert(records)// POST subsidiary_companies
+subsidiaryUpdate(id,fields)// PATCH subsidiary_companies?id=eq.{id}
+subsidiaryDelete(id)     // DELETE subsidiary_companies?id=eq.{id}
 ```
 
 ### 飞书推送
@@ -57,6 +63,7 @@ loanDelete(id)     // DELETE loan_businesses?id=eq.{id}
 📋 贸易业务统计汇总（max-width: 1008px，每行3张）
   └── 📝 投标阶段 | 🏆 中标阶段 | ✅ 完成阶段
   └── 💰 贸易子公司贷款类业务统计（第二行左对齐）
+  └── 🏢 贸易子公司统计（第三行左对齐，仅查看，不推送飞书日报）
 ```
 
 - 卡片容器：`.home-cards`，`justify-content: flex-start`，`max-width: 1008px`
@@ -78,6 +85,14 @@ loanDelete(id)     // DELETE loan_businesses?id=eq.{id}
 - `LoanStats.startEdit(id)` / `saveEdit(id)` / `cancelEdit()` — 编辑模式切换
 - `LoanStats.deleteRecord(id)` — 删除单条记录
 - `LoanStats.exportPDF()` — 导出 PDF
+
+### `SubsidiaryStats` 对象（贸易子公司统计）
+- `SubsidiaryStats.render()` — 渲染子公司信息表格
+- `SubsidiaryStats.addRecord()` — 添加新记录并进入编辑模式
+- `SubsidiaryStats.startEdit(id)` / `saveEdit(id)` / `cancelEdit()` — 编辑模式切换
+- `SubsidiaryStats.deleteRecord(id)` — 删除单条记录
+- `SubsidiaryStats.exportPDF()` — 导出 PDF
+- **前6月剩余发票量** = 前6月已开发票量 - 前6月使用发票量（自动计算，绿色显示）
 
 ## 行着色规则（贷款统计）
 - 🟢 `#c6f6d5`（绿色）：距到期日 > 2 个月
@@ -122,3 +137,41 @@ CREATE POLICY "允许匿名插入" ON loan_businesses FOR INSERT TO anon WITH CH
 CREATE POLICY "允许匿名更新" ON loan_businesses FOR UPDATE TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "允许匿名删除" ON loan_businesses FOR DELETE TO anon USING (true);
 ```
+
+## Supabase 建表参考（subsidiary_companies）
+
+```sql
+CREATE TABLE subsidiary_companies (
+  id BIGSERIAL PRIMARY KEY,
+  company_name TEXT NOT NULL DEFAULT '',
+  established_date DATE,
+  registered_capital NUMERIC NOT NULL DEFAULT 0,
+  region TEXT NOT NULL DEFAULT '',
+  paid_capital NUMERIC NOT NULL DEFAULT 0,
+  long_term_invoice_quota NUMERIC NOT NULL DEFAULT 0,
+  social_insurance_count INTEGER NOT NULL DEFAULT 0,
+  invoice_issued_6m NUMERIC NOT NULL DEFAULT 0,
+  invoice_used_6m NUMERIC NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE subsidiary_companies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "允许匿名读取" ON subsidiary_companies FOR SELECT TO anon USING (true);
+CREATE POLICY "允许匿名插入" ON subsidiary_companies FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "允许匿名更新" ON subsidiary_companies FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "允许匿名删除" ON subsidiary_companies FOR DELETE TO anon USING (true);
+```
+
+字段说明（单位均为"万元"除特别说明外）：
+| 字段 | 含义 |
+|------|------|
+| `company_name` | 公司名称 |
+| `established_date` | 成立时间 |
+| `registered_capital` | 注册资本（万元） |
+| `region` | 地址（市/区） |
+| `paid_capital` | 实缴资本（万元） |
+| `long_term_invoice_quota` | 长期发票额度（万元） |
+| `social_insurance_count` | 社保人数（整数） |
+| `invoice_issued_6m` | 前6月已开发票量（万元） |
+| `invoice_used_6m` | 前6月使用发票量（万元） |
+| 前6月剩余发票量 | **前端自动计算**：invoice_issued_6m - invoice_used_6m |

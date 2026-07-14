@@ -88,6 +88,7 @@
   .home-card.card-stats-win  { border-top-color: #dd6b20; }
   .home-card.card-stats-done { border-top-color: #38a169; }
   .home-card.card-stats-loan { border-top-color: #d69e2e; }
+  .home-card.card-stats-subsidiary { border-top-color: #2b6cb0; }
   .home-card .icon { font-size: 48px; margin-bottom: 16px; }
   .home-card h2 { font-size: 18px; color: #2d3748; margin-bottom: 8px; }
   .home-card p  { font-size: 13px; color: #718096; line-height: 1.6; }
@@ -245,6 +246,7 @@
       <div class="home-card card-stats-win" onclick="showView('stats-win')"><div class="icon">🏆</div><h2>中标阶段</h2><p>贸易方 / 成本 / 费率 / 报价 / 利润</p></div>
       <div class="home-card card-stats-done" onclick="showView('stats-done')"><div class="icon">✅</div><h2>完成阶段</h2><p>实付成本 / 实收金额 / 实际利润</p></div>
       <div class="home-card card-stats-loan" onclick="showView('stats-loan')"><div class="icon">💰</div><h2>贸易子公司贷款类业务统计</h2><p>贷款到期跟踪 / 颜色预警 / 飞书提醒</p></div>
+      <div class="home-card card-stats-subsidiary" onclick="showView('stats-subsidiary')"><div class="icon">🏢</div><h2>贸易子公司统计</h2><p>公司信息 / 注册资本 / 社保 / 发票额度</p></div>
     </div>
   </div>
 </div>
@@ -394,6 +396,22 @@
   </div>
 </div>
 
+<!-- ====== 视图：贸易子公司统计 ====== -->
+<div id="view-stats-subsidiary" style="display:none">
+  <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>🏢 贸易子公司统计</h1><p>Supabase 云端 · 公司信息汇总管理</p></div></div>
+  <div class="stats-container">
+    <div class="stats-toolbar">
+      <div class="toolbar-left">
+        <span style="color:#718096;font-size:13px" id="subsidiary-info"></span>
+        <span class="auto-save-indicator" id="subsidiary-save-status">已同步</span>
+      </div>
+      <button class="btn-action btn-add" onclick="SubsidiaryStats.addRecord()">＋ 添加记录</button>
+    </div>
+    <div class="stats-table-wrapper"><table class="stats-table" id="subsidiary-table"><thead><tr><th style="width:90px">操作</th><th>公司名称</th><th>成立时间</th><th>注册资本<br>(万元)</th><th>地址<br>(市/区)</th><th>实缴资本<br>(万元)</th><th>长期发票额度<br>(万元)</th><th>社保人数</th><th>前6月已开发票量<br>(万元)</th><th>前6月使用发票量<br>(万元)</th><th>前6月剩余发票量<br>(万元)</th></tr></thead><tbody id="subsidiary-tbody"></tbody></table></div>
+    <div class="stats-actions"><button class="btn-action btn-primary" onclick="SubsidiaryStats.exportPDF()">📥 导出PDF</button></div>
+  </div>
+</div>
+
 <!-- ====== 资料清单弹窗 ====== -->
 <style>
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:1000;justify-content:center;align-items:center}
@@ -445,7 +463,7 @@
   function fmtPct(v){return v.toFixed(3)+'%';}
 
   window.showView=function(view){
-    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done'),loan:document.getElementById('view-stats-loan')};
+    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done'),loan:document.getElementById('view-stats-loan'),subsidiary:document.getElementById('view-stats-subsidiary')};
     Object.values(els).forEach(function(e){if(e)e.style.display='none';});
     if(view==='home'){saveInputs(currentCalcType);els.home.style.display='block';}
     else if(view==='bill'||view==='lc'){saveInputs(currentCalcType);currentCalcType=view;applyLabels(view);restoreInputs(view);els.calc.style.display='block';recalc();}
@@ -454,6 +472,7 @@
     else if(view==='stats-win'){if(els.win){els.win.style.display='block';Stats.render('win');}}
     else if(view==='stats-done'){if(els.done){els.done.style.display='block';Stats.render('done');}}
     else if(view==='stats-loan'){if(els.loan){els.loan.style.display='block';LoanStats.render();}}
+    else if(view==='stats-subsidiary'){if(els.subsidiary){els.subsidiary.style.display='block';SubsidiaryStats.render();}}
   };
 
   function saveInputs(type){var s={};allInputs.forEach(function(el){s[el.id]=el.value;});inputState[type]=s;}
@@ -820,11 +839,136 @@ document.getElementById(stage+'-save-status').style.display='none';
     }
   };
 
+  // ===== Supabase 贸易子公司统计 CRUD =====
+  var SUBSIDIARY_API='https://jpcjwhyotcrhxstzwzid.supabase.co/rest/v1/subsidiary_companies';
+  var SUBSIDIARY_KEY=SB_KEY;
+  function subsidiaryGetAll(){return fetch(SUBSIDIARY_API+'?order=company_name.asc',{headers:{apikey:SUBSIDIARY_KEY,Authorization:'Bearer '+SUBSIDIARY_KEY}}).then(function(r){return r.json()})}
+  function subsidiaryInsert(records){return fetch(SUBSIDIARY_API,{method:'POST',headers:{apikey:SUBSIDIARY_KEY,Authorization:'Bearer '+SUBSIDIARY_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(records)}).then(function(r){return r.json()})}
+  function subsidiaryUpdate(id,fields){return fetch(SUBSIDIARY_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:SUBSIDIARY_KEY,Authorization:'Bearer '+SUBSIDIARY_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
+  function subsidiaryDelete(id){return fetch(SUBSIDIARY_API+'?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{apikey:SUBSIDIARY_KEY,Authorization:'Bearer '+SUBSIDIARY_KEY}})}
+
+  var SubsidiaryStats={
+    _cache:[],
+    _editing:null,
+
+    async load(){
+      try{this._cache=await subsidiaryGetAll()||[]}catch(e){this._cache=[]}
+    },
+
+    async render(){
+      document.getElementById('subsidiary-save-status').style.display='none';
+      await this.load();
+      var data=this._cache;
+      document.getElementById('subsidiary-info').textContent='共 '+data.length+' 条';
+      var tbody=document.getElementById('subsidiary-tbody');
+      if(!data.length){
+        tbody.innerHTML='<tr><td colspan="11" class="empty-hint">暂无记录，点击「＋ 添加记录」开始</td></tr>';
+        return;
+      }
+      var html='';
+      for(var i=0;i<data.length;i++){
+        var r=data[i];
+        var isEditing=this._editing===r.id;
+        var remaining=(parseFloat(r.invoice_issued_6m)||0)-(parseFloat(r.invoice_used_6m)||0);
+        html+='<tr>';
+        if(isEditing){
+          html+='<td><button class="loan-action-btn loan-save-btn" onclick="SubsidiaryStats.saveEdit('+r.id+')">💾 保存</button><button class="loan-action-btn loan-del-btn" onclick="SubsidiaryStats.cancelEdit()">✕</button></td>';
+          html+='<td><input type="text" id="sub-edit-companyName" value="'+escHtml(r.company_name||'')+'"></td>';
+          html+='<td><input type="date" id="sub-edit-establishedDate" value="'+escHtml(r.established_date||'')+'"></td>';
+          html+='<td><input type="number" id="sub-edit-registeredCapital" value="'+escHtml(r.registered_capital||'')+'" step="0.01" style="min-width:80px"></td>';
+          html+='<td><input type="text" id="sub-edit-region" value="'+escHtml(r.region||'')+'"></td>';
+          html+='<td><input type="number" id="sub-edit-paidCapital" value="'+escHtml(r.paid_capital||'')+'" step="0.01" style="min-width:80px"></td>';
+          html+='<td><input type="number" id="sub-edit-longTermInvoiceQuota" value="'+escHtml(r.long_term_invoice_quota||'')+'" step="0.01" style="min-width:80px"></td>';
+          html+='<td><input type="number" id="sub-edit-socialInsuranceCount" value="'+escHtml(r.social_insurance_count||'')+'" step="1" style="min-width:60px"></td>';
+          html+='<td><input type="number" id="sub-edit-invoiceIssued6m" value="'+escHtml(r.invoice_issued_6m||'')+'" step="0.01" style="min-width:80px"></td>';
+          html+='<td><input type="number" id="sub-edit-invoiceUsed6m" value="'+escHtml(r.invoice_used_6m||'')+'" step="0.01" style="min-width:80px"></td>';
+          html+='<td style="background:#f0fff4;color:#276749;font-weight:600;border-radius:4px">'+remaining.toFixed(2)+'</td>';
+        }else{
+          html+='<td><button class="loan-action-btn loan-edit-btn" onclick="SubsidiaryStats.startEdit('+r.id+')">📝 编辑</button><button class="loan-action-btn loan-del-btn" onclick="SubsidiaryStats.deleteRecord('+r.id+')">🗑 删除</button></td>';
+          html+='<td>'+escHtml(r.company_name||'')+'</td>';
+          html+='<td>'+escHtml(r.established_date||'')+'</td>';
+          html+='<td>'+escHtml(r.registered_capital||'')+'</td>';
+          html+='<td>'+escHtml(r.region||'')+'</td>';
+          html+='<td>'+escHtml(r.paid_capital||'')+'</td>';
+          html+='<td>'+escHtml(r.long_term_invoice_quota||'')+'</td>';
+          html+='<td>'+escHtml(r.social_insurance_count||'')+'</td>';
+          html+='<td>'+escHtml(r.invoice_issued_6m||'')+'</td>';
+          html+='<td>'+escHtml(r.invoice_used_6m||'')+'</td>';
+          html+='<td style="background:#f0fff4;color:#276749;font-weight:600;border-radius:4px">'+remaining.toFixed(2)+'</td>';
+        }
+        html+='</tr>';
+      }
+      tbody.innerHTML=html;
+      document.getElementById('subsidiary-save-status').textContent='已同步';
+      document.getElementById('subsidiary-save-status').style.display='inline';
+    },
+
+    startEdit(id){this._editing=id;this.render()},
+    cancelEdit(){this._editing=null;this.render()},
+
+    async saveEdit(id){
+      var fields={
+        company_name:document.getElementById('sub-edit-companyName').value.trim(),
+        established_date:document.getElementById('sub-edit-establishedDate').value||null,
+        registered_capital:parseFloat(document.getElementById('sub-edit-registeredCapital').value)||0,
+        region:document.getElementById('sub-edit-region').value.trim(),
+        paid_capital:parseFloat(document.getElementById('sub-edit-paidCapital').value)||0,
+        long_term_invoice_quota:parseFloat(document.getElementById('sub-edit-longTermInvoiceQuota').value)||0,
+        social_insurance_count:parseInt(document.getElementById('sub-edit-socialInsuranceCount').value)||0,
+        invoice_issued_6m:parseFloat(document.getElementById('sub-edit-invoiceIssued6m').value)||0,
+        invoice_used_6m:parseFloat(document.getElementById('sub-edit-invoiceUsed6m').value)||0
+      };
+      try{await subsidiaryUpdate(id,fields)}catch(e){alert('保存失败：'+e.message)}
+      this._editing=null;
+      this.render();
+    },
+
+    async addRecord(){
+      var record={company_name:'',established_date:null,registered_capital:0,region:'',paid_capital:0,long_term_invoice_quota:0,social_insurance_count:0,invoice_issued_6m:0,invoice_used_6m:0};
+      try{var result=await subsidiaryInsert(record);if(result&&result[0])record=result[0]}catch(e){alert('添加失败：'+e.message);return}
+      record.id=record.id||('local_'+Date.now());
+      this._editing=record.id;
+      this.render();
+    },
+
+    async deleteRecord(id){
+      if(!confirm('确认删除此条子公司记录？\n（此操作不可恢复）'))return;
+      try{await subsidiaryDelete(id)}catch(e){alert('删除失败：'+e.message)}
+      this._cache=this._cache.filter(function(r){return r.id!==id});
+      if(this._editing===id)this._editing=null;
+      this.render();
+    },
+
+    exportPDF(){
+      var t=new Date(),ds=t.getFullYear()+String(t.getMonth()+1).padStart(2,'0')+String(t.getDate()).padStart(2,'0');
+      document.title='贸易子公司统计_'+ds;
+      var el=document.getElementById('view-stats-subsidiary');
+      var others=['view-home','view-calc','view-quote','view-stats-bid','view-stats-win','view-stats-done','view-stats-loan'];
+      var btns=el.querySelectorAll('.btn-action,.loan-action-btn');
+      var printTitle=document.createElement('h2');
+      printTitle.id='print-title-temp';
+      printTitle.textContent='贸易子公司统计';
+      printTitle.style.cssText='text-align:center;font-size:18px;margin:12px 0 16px;color:#1e3a5f;';
+      el.insertBefore(printTitle,el.firstChild);
+      for(var i=0;i<btns.length;i++)btns[i].style.display='none';
+      for(var i=0;i<others.length;i++){var oe=document.getElementById(others[i]);if(oe)oe.style.display='none'}
+      el.style.display='block';
+      window.print();
+      setTimeout(function(){
+        if(printTitle.parentNode)printTitle.parentNode.removeChild(printTitle);
+        for(var i=0;i<btns.length;i++)btns[i].style.display='';
+        el.style.display='none';
+        document.title='贸易金融业务管理系统（Supabase）';
+      },500);
+    }
+  };
+
   // ===== 初始化 =====
   allInputs.forEach(function(input){input.addEventListener('input',recalc);});
   qAllInputs.forEach(function(input){input.addEventListener('input',recalcQuote);});
   window.Stats = Stats;
   window.LoanStats = LoanStats;
+  window.SubsidiaryStats = SubsidiaryStats;
   if(qElType)qElType.addEventListener('change',recalcQuote);
   applyLabels('bill');
   showView('home');
