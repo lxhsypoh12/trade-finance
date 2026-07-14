@@ -407,7 +407,7 @@
       </div>
       <button class="btn-action btn-add" onclick="SubsidiaryStats.addRecord()">＋ 添加记录</button>
     </div>
-    <div class="stats-table-wrapper"><table class="stats-table" id="subsidiary-table"><thead><tr><th style="width:90px">操作</th><th>公司名称</th><th>成立时间</th><th>注册资本<br>(万元)</th><th>地址<br>(市/区)</th><th>实缴资本<br>(万元)</th><th>长期发票额度<br>(万元)</th><th>社保人数</th><th>前6月已开发票量<br>(万元)</th><th>前6月使用发票量<br>(万元)</th><th>前6月剩余发票量<br>(万元)</th></tr></thead><tbody id="subsidiary-tbody"></tbody></table></div>
+    <div class="stats-table-wrapper"><table class="stats-table" id="subsidiary-table"><thead><tr><th style="width:90px">操作</th><th>公司名称</th><th>成立时间</th><th>注册资本<br>(万元)</th><th>实缴资本<br>(万元)</th><th>地址<br>(市/区)</th><th>社保人数</th><th>长期发票额度<br>(万元)</th><th>前6月已开发票量<br>(万元)</th><th>前6月使用发票量<br>(万元)</th><th>前6月剩余已开发票量<br>(万元)</th></tr></thead><tbody id="subsidiary-tbody"></tbody></table></div>
     <div class="stats-actions"><button class="btn-action btn-primary" onclick="SubsidiaryStats.exportPDF()">📥 导出PDF</button></div>
   </div>
 </div>
@@ -876,10 +876,10 @@ document.getElementById(stage+'-save-status').style.display='none';
           html+='<td><input type="text" id="sub-edit-companyName" value="'+escHtml(r.company_name||'')+'"></td>';
           html+='<td><input type="date" id="sub-edit-establishedDate" value="'+escHtml(r.established_date||'')+'"></td>';
           html+='<td><input type="number" id="sub-edit-registeredCapital" value="'+escHtml(r.registered_capital||'')+'" step="0.01" style="min-width:80px"></td>';
-          html+='<td><input type="text" id="sub-edit-region" value="'+escHtml(r.region||'')+'"></td>';
           html+='<td><input type="number" id="sub-edit-paidCapital" value="'+escHtml(r.paid_capital||'')+'" step="0.01" style="min-width:80px"></td>';
-          html+='<td><input type="number" id="sub-edit-longTermInvoiceQuota" value="'+escHtml(r.long_term_invoice_quota||'')+'" step="0.01" style="min-width:80px"></td>';
+          html+='<td><input type="text" id="sub-edit-region" value="'+escHtml(r.region||'')+'"></td>';
           html+='<td><input type="number" id="sub-edit-socialInsuranceCount" value="'+escHtml(r.social_insurance_count||'')+'" step="1" style="min-width:60px"></td>';
+          html+='<td><input type="number" id="sub-edit-longTermInvoiceQuota" value="'+escHtml(r.long_term_invoice_quota||'')+'" step="0.01" style="min-width:80px"></td>';
           html+='<td><input type="number" id="sub-edit-invoiceIssued6m" value="'+escHtml(r.invoice_issued_6m||'')+'" step="0.01" style="min-width:80px"></td>';
           html+='<td><input type="number" id="sub-edit-invoiceUsed6m" value="'+escHtml(r.invoice_used_6m||'')+'" step="0.01" style="min-width:80px"></td>';
           html+='<td style="background:#f0fff4;color:#276749;font-weight:600;border-radius:4px">'+remaining.toFixed(2)+'</td>';
@@ -888,10 +888,10 @@ document.getElementById(stage+'-save-status').style.display='none';
           html+='<td>'+escHtml(r.company_name||'')+'</td>';
           html+='<td>'+escHtml(r.established_date||'')+'</td>';
           html+='<td>'+escHtml(r.registered_capital||'')+'</td>';
-          html+='<td>'+escHtml(r.region||'')+'</td>';
           html+='<td>'+escHtml(r.paid_capital||'')+'</td>';
-          html+='<td>'+escHtml(r.long_term_invoice_quota||'')+'</td>';
+          html+='<td>'+escHtml(r.region||'')+'</td>';
           html+='<td>'+escHtml(r.social_insurance_count||'')+'</td>';
+          html+='<td>'+escHtml(r.long_term_invoice_quota||'')+'</td>';
           html+='<td>'+escHtml(r.invoice_issued_6m||'')+'</td>';
           html+='<td>'+escHtml(r.invoice_used_6m||'')+'</td>';
           html+='<td style="background:#f0fff4;color:#276749;font-weight:600;border-radius:4px">'+remaining.toFixed(2)+'</td>';

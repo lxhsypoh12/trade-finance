@@ -168,10 +168,10 @@ CREATE POLICY "允许匿名删除" ON subsidiary_companies FOR DELETE TO anon US
 | `company_name` | 公司名称 |
 | `established_date` | 成立时间 |
 | `registered_capital` | 注册资本（万元） |
-| `region` | 地址（市/区） |
 | `paid_capital` | 实缴资本（万元） |
-| `long_term_invoice_quota` | 长期发票额度（万元） |
+| `region` | 地址（市/区） |
 | `social_insurance_count` | 社保人数（整数） |
+| `long_term_invoice_quota` | 长期发票额度（万元） |
 | `invoice_issued_6m` | 前6月已开发票量（万元） |
 | `invoice_used_6m` | 前6月使用发票量（万元） |
-| 前6月剩余发票量 | **前端自动计算**：invoice_issued_6m - invoice_used_6m |
+| 前6月剩余已开发票量 | **前端自动计算**：invoice_issued_6m - invoice_used_6m |
