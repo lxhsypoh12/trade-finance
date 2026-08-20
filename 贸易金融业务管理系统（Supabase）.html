@@ -187,6 +187,13 @@
     transition: background 0.2s; font-family: inherit;
   }
   .btn-pdf:hover { background: #1e3a5f; }
+  .btn-excel {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 18px; background: #38a169; color: #fff;
+    border: none; border-radius: 6px; font-size: 13px; cursor: pointer;
+    transition: background 0.2s; font-family: inherit;
+  }
+  .btn-excel:hover { background: #2f855a; }
 
   @media (max-width: 880px) {
     .calc-container { flex-direction: column; padding: 0 12px; }
@@ -360,21 +367,21 @@
   <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>📝 投标阶段业务统计表</h1><p>Supabase 云端 · 多人共享 · 实时同步</p></div></div>
   <div class="stats-container"><div class="stats-toolbar"><div class="toolbar-left"><span style="color:#718096;font-size:13px" id="bid-info"></span><span class="auto-save-indicator" id="bid-save-status">已同步</span></div><button class="btn-action btn-add" onclick="Stats.addBid()">＋ 添加记录</button></div>
     <div class="stats-table-wrapper"><table class="stats-table" id="bid-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('bid',this)"></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>时间<br>(年/月)</th><th>负责人</th><th style="width:90px">操作</th></tr></thead><tbody id="bid-tbody"></tbody></table></div>
-    <div class="stats-actions"><button class="btn-action btn-danger" onclick="Stats.batchDelete('bid')">🗑 删除选中</button><button class="btn-action btn-success" onclick="Stats.migrateBidToWin()">🏆 迁移至中标阶段</button><button class="btn-action btn-primary" onclick="Stats.exportPDF('bid')">📥 导出PDF</button></div>
+    <div class="stats-actions"><button class="btn-action btn-danger" onclick="Stats.batchDelete('bid')">🗑 删除选中</button><button class="btn-action btn-success" onclick="Stats.migrateBidToWin()">🏆 迁移至中标阶段</button><button class="btn-action btn-primary" onclick="Stats.exportPDF('bid')">📥 导出PDF</button><button class="btn-excel" onclick="Stats.exportExcel('bid')">📊 导出Excel</button></div>
   </div>
 </div>
 <div id="view-stats-win" style="display:none">
   <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>🏆 中标阶段业务统计表</h1><p>Supabase 云端 · 多人共享 · 实时同步</p></div></div>
   <div class="stats-container"><div class="stats-toolbar"><div class="toolbar-left"><span style="color:#718096;font-size:13px" id="win-info"></span><span class="auto-save-indicator" id="win-save-status">已同步</span></div></div>
     <div class="stats-table-wrapper"><table class="stats-table" id="win-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('win',this)"></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>时间<br>(年/月)</th><th>负责人</th><th>贸易方</th><th>贸易成本<br>(万元)</th><th>中标费率<br>(%)</th><th>中标金额<br>(万元)</th><th>预计利润<br>(万元)</th></tr></thead><tbody id="win-tbody"></tbody></table></div>
-    <div class="stats-actions"><button class="btn-action btn-danger" onclick="Stats.batchDelete('win')">🗑 删除选中</button><button class="btn-action btn-success" onclick="Stats.migrateWinToDone()">✅ 迁移至完成阶段</button><button class="btn-action btn-primary" onclick="Stats.exportPDF('win')">📥 导出PDF</button></div>
+    <div class="stats-actions"><button class="btn-action btn-danger" onclick="Stats.batchDelete('win')">🗑 删除选中</button><button class="btn-action btn-success" onclick="Stats.migrateWinToDone()">✅ 迁移至完成阶段</button><button class="btn-action btn-primary" onclick="Stats.exportPDF('win')">📥 导出PDF</button><button class="btn-excel" onclick="Stats.exportExcel('win')">📊 导出Excel</button></div>
   </div>
 </div>
 <div id="view-stats-done" style="display:none">
   <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>✅ 完成阶段业务统计表</h1><p>Supabase 云端 · 多人共享 · 实时同步</p></div></div>
   <div class="stats-container"><div class="stats-toolbar"><div class="toolbar-left"><span style="color:#718096;font-size:13px" id="done-info"></span><span class="auto-save-indicator" id="done-save-status">已同步</span></div></div>
     <div class="stats-table-wrapper"><table class="stats-table" id="done-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('done',this)"></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>时间<br>(年/月)</th><th>负责人</th><th>贸易方</th><th>实付成本<br>(万元)</th><th>实收金额<br>(万元)</th><th>实际利润<br>(万元)</th><th>归档状态</th><th>归档日期</th><th style="width:70px">资料</th></tr></thead><tbody id="done-tbody"></tbody></table></div>
-    <div class="stats-actions"><button class="btn-action btn-danger" onclick="Stats.batchDelete('done')">🗑 删除选中</button><button class="btn-action btn-primary" onclick="Stats.exportPDF('done')">📥 导出PDF</button></div>
+    <div class="stats-actions"><button class="btn-action btn-danger" onclick="Stats.batchDelete('done')">🗑 删除选中</button><button class="btn-action btn-primary" onclick="Stats.exportPDF('done')">📥 导出PDF</button><button class="btn-excel" onclick="Stats.exportExcel('done')">📊 导出Excel</button></div>
     <div class="stats-summary"><span class="total-profit">📊 公司总利润：<b id="total-profit">0.00</b> 万元</span></div>
   </div>
 </div>
@@ -628,6 +635,53 @@ document.getElementById(stage+'-save-status').style.display='none';
         el.style.display='none';
         document.title='贸易金融业务管理系统（Supabase）';
       },500);
+    },
+
+    exportExcel(stage){
+      var names={bid:'投标阶段业务统计表',win:'中标阶段业务统计表',done:'完成阶段业务统计表'};
+      var cols={
+        bid:['区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人'],
+        win:['区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人','贸易方','贸易成本(万元)','中标费率(%)','中标金额(万元)','预计利润(万元)'],
+        done:['区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人','贸易方','实付成本(万元)','实收金额(万元)','实际利润(万元)','归档状态','归档日期']
+      };
+      var data=this._cache[stage]||[];
+      var t=new Date(),ds=t.getFullYear()+String(t.getMonth()+1).padStart(2,'0')+String(t.getDate()).padStart(2,'0');
+      var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+      html+='<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>'+names[stage]+'</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
+      html+='<table border="1"><thead><tr><th style="background:#1e3a5f;color:#fff;font-weight:bold">序号</th>';
+      var c=cols[stage];
+      for(var i=0;i<c.length;i++)html+='<th style="background:#1e3a5f;color:#fff;font-weight:bold">'+c[i]+'</th>';
+      html+='</tr></thead><tbody>';
+      for(var i=0;i<data.length;i++){
+        var r=data[i];
+        html+='<tr><td>'+(i+1)+'</td>';
+        if(stage==='bid'){
+          html+='<td>'+escHtml(r.region||'')+'</td><td>'+escHtml(r.company||'')+'</td><td>'+escHtml(r.bank||'')+'</td>';
+          html+='<td>'+(r.amount||'')+'</td><td>'+escHtml(r.biz_type||'')+'</td><td>'+escHtml(r.time||'')+'</td><td>'+escHtml(r.person||'')+'</td>';
+        }else if(stage==='win'){
+          var ep=parseFloat(r.win_amount||0)*parseFloat(r.win_rate||0)/100;
+          html+='<td>'+escHtml(r.region||'')+'</td><td>'+escHtml(r.company||'')+'</td><td>'+escHtml(r.bank||'')+'</td>';
+          html+='<td>'+(r.amount||'')+'</td><td>'+escHtml(r.biz_type||'')+'</td><td>'+escHtml(r.time||'')+'</td><td>'+escHtml(r.person||'')+'</td>';
+          html+='<td>'+escHtml(r.trader||'')+'</td><td>'+(r.trade_cost||'')+'</td><td>'+(r.win_rate||'')+'</td><td>'+(r.win_amount||'')+'</td><td>'+ep.toFixed(2)+'</td>';
+        }else if(stage==='done'){
+          var ap=parseFloat(r.actual_revenue||0)-parseFloat(r.actual_cost||0);
+          html+='<td>'+escHtml(r.region||'')+'</td><td>'+escHtml(r.company||'')+'</td><td>'+escHtml(r.bank||'')+'</td>';
+          html+='<td>'+(r.amount||'')+'</td><td>'+escHtml(r.biz_type||'')+'</td><td>'+escHtml(r.time||'')+'</td><td>'+escHtml(r.person||'')+'</td>';
+          html+='<td>'+escHtml(r.trader||'')+'</td><td>'+(r.actual_cost||'')+'</td><td>'+(r.actual_revenue||'')+'</td><td>'+ap.toFixed(2)+'</td>';
+          html+='<td>'+escHtml(r.archive_status||'未归档')+'</td><td>'+escHtml(r.archive_date||'')+'</td>';
+        }
+        html+='</tr>';
+      }
+      html+='</tbody></table></body></html>';
+      var blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');
+      a.href=url;
+      a.download=names[stage].replace('业务统计表','')+'_'+ds+'.xls';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     },
 
     _getChecked(stage){var cbs=document.querySelectorAll('#'+stage+'-table .row-cb:checked');var ids=[];for(var i=0;i<cbs.length;i++)ids.push(cbs[i].value);return ids},
