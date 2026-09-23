@@ -385,7 +385,7 @@
 <div id="view-stats-done" style="display:none">
   <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>✅ 完成阶段业务统计表</h1><p>Supabase 云端 · 多人共享 · 实时同步</p></div></div>
   <div class="stats-container"><div class="stats-toolbar"><div class="toolbar-left"><span style="color:#718096;font-size:13px" id="done-info"></span><span class="auto-save-indicator" id="done-save-status">已同步</span></div></div>
-    <div class="stats-table-wrapper"><table class="stats-table" id="done-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('done',this)"></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>时间<br>(年/月)</th><th>负责人</th><th>业务板块</th><th>贸易方</th><th>实付成本<br>(万元)</th><th>实收金额<br>(万元)</th><th>实际利润<br>(万元)</th><th>归档状态</th><th style="width:70px">资料</th></tr></thead><tbody id="done-tbody"></tbody></table></div>
+    <div class="stats-table-wrapper"><table class="stats-table" id="done-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('done',this)"></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>完成时间<br>(年/月)</th><th>负责人</th><th>业务板块</th><th>贸易方</th><th>实际利润<br>(万元)</th><th>归档状态</th><th style="width:70px">资料</th></tr></thead><tbody id="done-tbody"></tbody></table></div>
     <div class="stats-actions"><button class="btn-action btn-danger" onclick="Stats.batchDelete('done')">🗑 删除选中</button><button class="btn-action btn-primary" onclick="Stats.exportPDF('done')">📥 导出PDF</button><button class="btn-excel" onclick="Stats.exportExcel('done')">📊 导出Excel</button></div>
     <div class="stats-summary"><span class="total-profit">📊 公司总利润：<b id="total-profit">0.00</b> 万元</span><span class="total-profit" style="background:#ebf8ff;border-color:#3182ce;color:#2c5282;margin-left:12px">💼 咨询类总利润：<b id="consult-profit">0.00</b> 万元</span><span class="total-profit" style="background:#fffaf0;border-color:#dd6b20;color:#9c4221;margin-left:12px">🏭 自营类总利润：<b id="self-profit">0.00</b> 万元</span></div>
   </div>
@@ -449,6 +449,17 @@
 .archive-date-row input:disabled{background:#edf2f7;color:#a0aec0;cursor:not-allowed}
 .archive-date-hint{font-size:11px;color:#718096;font-weight:400}
 .archive-date-row>span:first-child{white-space:nowrap}
+.profit-group-title{font-size:13px;font-weight:700;color:#1e3a5f;margin:12px 0 6px}
+.profit-group-title:first-child{margin-top:0}
+.profit-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.profit-row label{flex:1;font-size:13px;color:#4a5568}
+.profit-row input{width:120px;padding:6px 8px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:right;outline:none}
+.profit-row input:focus{border-color:#3182ce}
+.profit-subtotal{display:flex;justify-content:space-between;padding:6px 10px;background:#f7fafc;border-radius:6px;font-size:13px;font-weight:700;color:#2d3748;margin-bottom:4px}
+.profit-total-bar{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:10px 14px;background:#f0fff4;border:2px solid #38a169;border-radius:8px;font-size:15px;font-weight:700;color:#276749}
+.profit-fallback-note{margin-top:10px;padding:8px 10px;background:#fefcbf;border:1px solid #f6e05e;border-radius:6px;font-size:12px;color:#744210}
+.profit-fallback-note button{margin-left:8px;padding:3px 10px;background:#d69e2e;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer}
+.profit-seg-note{padding:16px;text-align:center;color:#a0aec0;font-size:13px}
 .material-list-title{font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:8px}
 </style>
 <div class="modal-overlay" id="modal-materials">
@@ -458,6 +469,17 @@
       <button class="modal-close" onclick="Stats.closeMaterials()">✕</button>
     </div>
     <div class="modal-body" id="modal-materials-body">
+      <div style="text-align:center;color:#a0aec0;padding:20px">加载中...</div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-profit">
+  <div class="modal-box" style="width:520px">
+    <div class="modal-header">
+      <h3 id="modal-profit-title">💰 收支明细</h3>
+      <button class="modal-close" onclick="Stats.closeProfitDetail()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-profit-body">
       <div style="text-align:center;color:#a0aec0;padding:20px">加载中...</div>
     </div>
   </div>
@@ -556,6 +578,9 @@
   var BIZ_TYPES=['银承-回报','银承-供应链','信用证-回报','信用证-供应链','跑量/受托支付','存款','时点','其他'];
   function bizTypeOpts(sel){var o='<option value=\"\">选择类型</option>';for(var i=0;i<BIZ_TYPES.length;i++)o+='<option value=\"'+BIZ_TYPES[i]+'\"'+(sel===BIZ_TYPES[i]?' selected':'')+'>'+BIZ_TYPES[i]+'</option>';return o}
   function segmentOpts(sel){var segs=['咨询','自营'];var o='<option value="">选择板块</option>';for(var i=0;i<segs.length;i++)o+='<option value="'+segs[i]+'"'+(sel===segs[i]?' selected':'')+'>'+segs[i]+'</option>';return o}
+  var SEG_ITEMS={'咨询':{income:[['service_fee','服务费收入'],['other','其他收入']],expense:[['service_provider','服务商支出'],['other','其他支出']]},'自营':{income:[['service_fee','服务费收入'],['deposit_interest','存款利息收入'],['post_interest','后置利息收入'],['other','其他收入']],expense:[['service_provider','服务商支出'],['discount','贴现/议付支出'],['capital_occupy','资金占用支出'],['retained_profit','留存利润支出'],['handling_fee','手续费支出'],['other','其他支出']]}};
+  function parseDetail(r){try{var d=JSON.parse(r.profit_detail||'');return(d&&typeof d==='object')?d:null}catch(e){return null}}
+  function effProfit(r){var d=parseDetail(r);if(d){var s=0,k,inc=d.income||{},exp=d.expense||{};for(k in inc)s+=parseFloat(inc[k])||0;for(k in exp)s-=parseFloat(exp[k])||0;return s}return(parseFloat(r.actual_revenue||0)-parseFloat(r.actual_cost||0))}
   function escHtml(s){if(s===null||s===undefined)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 
   var Stats={_cache:{bid:[],win:[],done:[]},
@@ -582,8 +607,8 @@ document.getElementById(stage+'-save-status').style.display='none';
       }else if(stage==='done'){
         document.getElementById('done-info').textContent='共 '+data.length+' 条';
         var html='',totalProfit=0,consultProfit=0,selfProfit=0;
-        for(var i=0;i<data.length;i++){var r=data[i];var ap=(parseFloat(r.actual_revenue||0)-parseFloat(r.actual_cost||0));totalProfit+=ap;if(r.business_segment==='咨询')consultProfit+=ap;else if(r.business_segment==='自营')selfProfit+=ap;var aStatus=r.archive_status||'未归档';html+='<tr><td><input type=\"checkbox\" class=\"row-cb\" value=\"'+escHtml(r.id)+'\"></td><td><span class=\"readonly-cell\">'+escHtml(r.region||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.company||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.bank||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.amount||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.biz_type||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.time||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.person||'')+'</span></td><td><select onchange=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'business_segment\',this.value)\" style=\"font-size:11px;padding:3px 4px;border:1px solid #cbd5e0;border-radius:4px;background:#fff;cursor:pointer;min-width:78px\">'+segmentOpts(r.business_segment)+'</select></td><td><input type=\"text\" value=\"'+escHtml(r.trader||'')+'\" onblur=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'trader\',this.value)\"></td><td><input type=\"number\" value=\"'+escHtml(r.actual_cost||'')+'\" onblur=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'actual_cost\',this.value)\" step=\"0.01\"></td><td><input type=\"number\" value=\"'+escHtml(r.actual_revenue||'')+'\" onblur=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'actual_revenue\',this.value)\" step=\"0.01\"></td><td><span class=\"formula-cell\">'+ap.toFixed(2)+'</span></td><td><select onchange=\"Stats.archiveStatusChange(\''+escHtml(r.id)+'\',this.value)\" style=\"font-size:11px;padding:3px 4px;border:1px solid '+(aStatus==='未归档'?'#e53e3e':'#38a169')+';border-radius:4px;background:'+(aStatus==='未归档'?'#fff5f5':'#f0fff4')+';cursor:pointer\"><option value=\"未归档\"'+(aStatus==='未归档'?' selected':'')+'>未归档</option><option value=\"已归档\"'+(aStatus==='已归档'?' selected':'')+'>已归档</option></select></td><td><button onclick=\"Stats.showMaterials(\''+escHtml(r.id)+'\')\" style=\"font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #cbd5e0;background:#fff;cursor:pointer\">📎资料</button></td></tr>'}
-        if(!data.length)html='<tr><td colspan=\"15\" class=\"empty-hint\">暂无记录</td></tr>';
+        for(var i=0;i<data.length;i++){var r=data[i];var ap=effProfit(r);totalProfit+=ap;if(r.business_segment==='咨询')consultProfit+=ap;else if(r.business_segment==='自营')selfProfit+=ap;var aStatus=r.archive_status||'未归档';html+='<tr><td><input type=\"checkbox\" class=\"row-cb\" value=\"'+escHtml(r.id)+'\"></td><td><span class=\"readonly-cell\">'+escHtml(r.region||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.company||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.bank||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.amount||'')+'</span></td><td><span class=\"readonly-cell\">'+escHtml(r.biz_type||'')+'</span></td><td><input type=\"text\" value=\"'+escHtml(r.time||'')+'\" onblur=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'time\',this.value)\"></td><td><span class=\"readonly-cell\">'+escHtml(r.person||'')+'</span></td><td><select onchange=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'business_segment\',this.value)\" style=\"font-size:11px;padding:3px 4px;border:1px solid #cbd5e0;border-radius:4px;background:#fff;cursor:pointer;min-width:78px\">'+segmentOpts(r.business_segment)+'</select></td><td><input type=\"text\" value=\"'+escHtml(r.trader||'')+'\" onblur=\"Stats.cellUpdate(\'done\',\''+escHtml(r.id)+'\',\'trader\',this.value)\"></td><td><span class=\"formula-cell\">'+ap.toFixed(2)+'</span><button onclick=\"Stats.showProfitDetail(\''+escHtml(r.id)+'\')\" style=\"font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #cbd5e0;background:#fff;cursor:pointer;margin-left:6px\">💰 收支明细</button></td><td><select onchange=\"Stats.archiveStatusChange(\''+escHtml(r.id)+'\',this.value)\" style=\"font-size:11px;padding:3px 4px;border:1px solid '+(aStatus==='未归档'?'#e53e3e':'#38a169')+';border-radius:4px;background:'+(aStatus==='未归档'?'#fff5f5':'#f0fff4')+';cursor:pointer\"><option value=\"未归档\"'+(aStatus==='未归档'?' selected':'')+'>未归档</option><option value=\"已归档\"'+(aStatus==='已归档'?' selected':'')+'>已归档</option></select></td><td><button onclick=\"Stats.showMaterials(\''+escHtml(r.id)+'\')\" style=\"font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #cbd5e0;background:#fff;cursor:pointer\">📎资料</button></td></tr>'}
+        if(!data.length)html='<tr><td colspan=\"13\" class=\"empty-hint\">暂无记录</td></tr>';
         document.getElementById('done-tbody').innerHTML=html;
         document.getElementById('total-profit').textContent=totalProfit.toFixed(2);
         document.getElementById('consult-profit').textContent=consultProfit.toFixed(2);
@@ -656,7 +681,7 @@ document.getElementById(stage+'-save-status').style.display='none';
       var cols={
         bid:['区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人'],
         win:['区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人','贸易方','贸易成本(万元)','中标费率(%)','中标金额(万元)','预计利润(万元)'],
-        done:['区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人','业务板块','贸易方','实付成本(万元)','实收金额(万元)','实际利润(万元)','归档状态','归档日期']
+        done:['区域','城投公司','金融机构','业务规模(万元)','业务类型','完成时间(年/月)','负责人','业务板块','贸易方','实际利润(万元)','归档状态','归档日期']
       };
       var data=this._cache[stage]||[];
       var t=new Date(),ds=t.getFullYear()+String(t.getMonth()+1).padStart(2,'0')+String(t.getDate()).padStart(2,'0');
@@ -678,10 +703,9 @@ document.getElementById(stage+'-save-status').style.display='none';
           html+='<td>'+(r.amount||'')+'</td><td>'+escHtml(r.biz_type||'')+'</td><td>'+escHtml(r.time||'')+'</td><td>'+escHtml(r.person||'')+'</td>';
           html+='<td>'+escHtml(r.trader||'')+'</td><td>'+(r.trade_cost||'')+'</td><td>'+(r.win_rate||'')+'</td><td>'+(r.win_amount||'')+'</td><td>'+ep.toFixed(2)+'</td>';
         }else if(stage==='done'){
-          var ap=parseFloat(r.actual_revenue||0)-parseFloat(r.actual_cost||0);
           html+='<td>'+escHtml(r.region||'')+'</td><td>'+escHtml(r.company||'')+'</td><td>'+escHtml(r.bank||'')+'</td>';
           html+='<td>'+(r.amount||'')+'</td><td>'+escHtml(r.biz_type||'')+'</td><td>'+escHtml(r.time||'')+'</td><td>'+escHtml(r.person||'')+'</td>';
-          html+='<td>'+escHtml(r.business_segment||'')+'</td><td>'+escHtml(r.trader||'')+'</td><td>'+(r.actual_cost||'')+'</td><td>'+(r.actual_revenue||'')+'</td><td>'+ap.toFixed(2)+'</td>';
+          html+='<td>'+escHtml(r.business_segment||'')+'</td><td>'+escHtml(r.trader||'')+'</td><td>'+effProfit(r).toFixed(2)+'</td>';
           html+='<td>'+escHtml(r.archive_status||'未归档')+'</td><td>'+escHtml(r.archive_date||'')+'</td>';
         }
         html+='</tr>';
@@ -724,6 +748,73 @@ document.getElementById(stage+'-save-status').style.display='none';
       r.archive_date=val;
       r.updated_at=new Date().toISOString();
       await this.updateRecord(id,{archive_date:val,updated_at:r.updated_at});
+    },
+
+    showProfitDetail:function(id){
+      var r=this._cache['done'].find(function(x){return x.id===id});
+      if(!r)return;
+      document.getElementById('modal-profit-title').textContent='💰 收支明细 — '+(r.company||'项目');
+      this.renderProfitDetail(id);
+      document.getElementById('modal-profit').className='modal-overlay active';
+    },
+    closeProfitDetail:function(){document.getElementById('modal-profit').className='modal-overlay'},
+    renderProfitDetail:function(id){
+      var r=this._cache['done'].find(function(x){return x.id===id});
+      if(!r)return;
+      var seg=r.business_segment||'';
+      var body=document.getElementById('modal-profit-body');
+      if(!seg){body.innerHTML='<div class="profit-seg-note">请先在主表「业务板块」列选择 咨询 / 自营，再录入收支明细</div>';return}
+      var d=parseDetail(r)||{income:{},expense:{}};
+      var inc=d.income||{},exp=d.expense||{},items=SEG_ITEMS[seg];
+      var iSum=0,eSum=0;
+      var html='<div class="profit-group-title">📈 收入项</div>';
+      for(var i=0;i<items.income.length;i++){var k=items.income[i][0],lab=items.income[i][1];var v=parseFloat(inc[k])||0;iSum+=v;
+        html+='<div class="profit-row"><label>'+lab+'</label><input type="number" step="0.01" value="'+(inc[k]==null?'':v)+'" onchange="Stats.profitDetailChange(\''+escHtml(id)+'\',\'income\',\''+k+'\',this.value)"></div>'}
+      html+='<div class="profit-subtotal"><span>收入合计</span><span id="pd-inc-sum">'+iSum.toFixed(2)+'</span></div>';
+      html+='<div class="profit-group-title">📉 支出项</div>';
+      for(var i=0;i<items.expense.length;i++){var k=items.expense[i][0],lab=items.expense[i][1];var v=parseFloat(exp[k])||0;eSum+=v;
+        html+='<div class="profit-row"><label>'+lab+'</label><input type="number" step="0.01" value="'+(exp[k]==null?'':v)+'" onchange="Stats.profitDetailChange(\''+escHtml(id)+'\',\'expense\',\''+k+'\',this.value)"></div>'}
+      html+='<div class="profit-subtotal"><span>支出合计</span><span id="pd-exp-sum">'+eSum.toFixed(2)+'</span></div>';
+      html+='<div class="profit-total-bar"><span>实际利润 = 收入合计 − 支出合计</span><span id="pd-total">'+(iSum-eSum).toFixed(2)+' 万元</span></div>';
+      if(!parseDetail(r)&&(parseFloat(r.actual_revenue)||parseFloat(r.actual_cost))){
+        html+='<div class="profit-fallback-note">⚠️ 该记录尚未录入收支明细，当前利润沿用旧口径（实收−实付）='+(parseFloat(r.actual_revenue||0)-parseFloat(r.actual_cost||0)).toFixed(2)+' 万<button onclick="Stats.seedDetailFromLegacy(\''+escHtml(id)+'\')">带入旧收支</button></div>';
+      }
+      body.innerHTML=html;
+    },
+    updateProfitSums:function(id){
+      var r=this._cache['done'].find(function(x){return x.id===id});
+      if(!r)return;
+      var d=parseDetail(r);if(!d)return;
+      var inc=d.income||{},exp=d.expense||{},iSum=0,eSum=0,k;
+      for(k in inc)iSum+=parseFloat(inc[k])||0;
+      for(k in exp)eSum+=parseFloat(exp[k])||0;
+      var a=document.getElementById('pd-inc-sum');if(a)a.textContent=iSum.toFixed(2);
+      var b=document.getElementById('pd-exp-sum');if(b)b.textContent=eSum.toFixed(2);
+      var c=document.getElementById('pd-total');if(c)c.textContent=(iSum-eSum).toFixed(2)+' 万元';
+    },
+    async profitDetailChange(id,group,key,value){
+      var r=this._cache['done'].find(function(x){return x.id===id});
+      if(!r)return;
+      var d=parseDetail(r)||{income:{},expense:{}};
+      d[group]=d[group]||{};
+      d[group][key]=parseFloat(value)||0;
+      r.profit_detail=JSON.stringify(d);
+      r.updated_at=new Date().toISOString();
+      await this.updateRecord(id,{profit_detail:r.profit_detail,updated_at:r.updated_at});
+      this.updateProfitSums(id);
+      var note=document.querySelector('#modal-profit-body .profit-fallback-note');
+      if(note)note.remove(); // 明细已落库，移除开弹窗时渲染的过期"尚未录入"提示
+      this.render('done');
+    },
+    async seedDetailFromLegacy(id){
+      var r=this._cache['done'].find(function(x){return x.id===id});
+      if(!r)return;
+      var d={income:{other:parseFloat(r.actual_revenue)||0},expense:{other:parseFloat(r.actual_cost)||0}};
+      r.profit_detail=JSON.stringify(d);
+      r.updated_at=new Date().toISOString();
+      await this.updateRecord(id,{profit_detail:r.profit_detail,updated_at:r.updated_at});
+      this.renderProfitDetail(id);
+      this.render('done');
     },
 
     showMaterials:function(id){

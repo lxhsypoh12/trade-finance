@@ -14,6 +14,18 @@ def 查询(stage):
     r = requests.get(f"{SB_URL}?stage=eq.{stage}&order=created_at.desc", headers=HEADERS)
     return r.json() if r.status_code == 200 else []
 
+def 明细利润(r):
+    """完成阶段利润：有收支明细按明细合计，否则回退 实收−实付（与网页端 effProfit 同口径）"""
+    try:
+        d = json.loads(r.get("profit_detail") or "")
+        if isinstance(d, dict):
+            收 = d.get("income") or {}
+            支 = d.get("expense") or {}
+            return sum(float(v or 0) for v in 收.values()) - sum(float(v or 0) for v in 支.values())
+    except (ValueError, TypeError):
+        pass
+    return float(r.get("actual_revenue") or 0) - float(r.get("actual_cost") or 0)
+
 def 发卡片(标题, 摘要, 列表行):
     elements = [
         {"tag": "div", "text": {"tag": "lark_md", "content": 摘要}},
@@ -58,19 +70,17 @@ def 查中标():
 def 查完成():
     data = 查询("done")
     if not data: return 发卡片("完成阶段项目汇总", "目前 **无** 完成阶段项目。", [])
-    total = sum((float(r.get("actual_revenue") or 0) - float(r.get("actual_cost") or 0)) for r in data)
+    total = sum(明细利润(r) for r in data)
     列表 = []
     for r in data[:10]:
-        实付 = float(r.get('actual_cost') or 0)
-        实收 = float(r.get('actual_revenue') or 0)
-        列表.append(f"• {r.get('region','-')} | {r.get('company','-')} | 实付{实付} | 实收{实收} | 利润{实收-实付:.2f}万")
+        列表.append(f"• {r.get('region','-')} | {r.get('company','-')} | 利润{明细利润(r):.2f}万")
     if len(data) > 10: 列表.append(f"...共{len(data)}条，详情查看系统")
     return 发卡片("完成阶段项目汇总", f"共 **{len(data)}** 个项目 | 实际总利润 **{total:.2f}万**", 列表)
 
 def 查全部():
     bid = 查询("bid"); win = 查询("win"); done = 查询("done")
     win_p = sum(float(r.get("est_profit", 0) or 0) for r in win)
-    done_p = sum((float(r.get("actual_revenue") or 0) - float(r.get("actual_cost") or 0)) for r in done)
+    done_p = sum(明细利润(r) for r in done)
     列表 = [
         f"📝 投标：**{len(bid)}** 个",
         f"🏆 中标：**{len(win)}** 个 | 预计利润 **{win_p:.0f}万**",
