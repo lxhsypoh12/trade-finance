@@ -823,8 +823,8 @@ document.getElementById(stage+'-save-status').style.display='none';
       var items=[];
       try{items=JSON.parse(r.archive_note||'[]')}catch(e){items=[]}
       var body=document.getElementById('modal-materials-body');
-      var aStatus=r.archive_status||'未归档',aDate=r.archive_date||'',todayStr=new Date().toISOString().split('T')[0];
-      var html='<div class="archive-date-row"><span>📅 归档日期</span><input type="date" value="'+escHtml(aDate)+'" min="'+todayStr+'" onchange="Stats.archiveDateChange(\''+escHtml(id)+'\',this.value)"'+(aStatus!=='已归档'?' disabled':'')+'><span class="archive-date-hint">'+(aStatus==='已归档'?'已归档，可在此修改日期':'未归档 — 在主表切换为「已归档」后可编辑')+'</span></div>';
+      var aStatus=r.archive_status||'未归档',aDate=r.archive_date||'';
+      var html='<div class="archive-date-row"><span>📅 归档日期</span><input type="date" value="'+escHtml(aDate)+'" onchange="Stats.archiveDateChange(\''+escHtml(id)+'\',this.value)"'+(aStatus!=='已归档'?' disabled':'')+'><span class="archive-date-hint">'+(aStatus==='已归档'?'已归档，可在此修改日期':'未归档 — 在主表切换为「已归档」后可编辑')+'</span></div>';
       html+='<div class="material-list-title">📎 资料清单</div>';
       for(var i=0;i<items.length;i++){
         html+='<div class="material-item"><input type="checkbox" class="mat-check"'+(items[i].done?' checked':'')+' onchange="Stats.toggleMaterial(\''+escHtml(id)+'\','+i+',this.checked)"><span class="mat-name">'+escHtml(items[i].name)+'</span><button class="mat-del" onclick="Stats.removeMaterial(\''+escHtml(id)+'\','+i+')">✕</button></div>';
