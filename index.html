@@ -362,6 +362,8 @@
 .stats-table input[type="date"]:focus{border-color:#3182ce;outline:none;box-shadow:0 0 0 2px rgba(49,130,206,0.12)}
 .stats-table textarea{width:100%;min-width:140px;padding:4px 5px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px;font-family:inherit;background:#fff;transition:border-color 0.2s;resize:vertical}
 .stats-table textarea:focus{border-color:#3182ce;outline:none;box-shadow:0 0 0 2px rgba(49,130,206,0.12)}
+.errorlog-filter{padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;color:#2d3748;background:#fff;cursor:pointer;font-family:inherit}
+.errorlog-filter:focus{border-color:#3182ce;outline:none}
 .loan-action-btn{padding:3px 8px;border:none;border-radius:4px;font-size:11px;cursor:pointer;margin:0 1px;transition:background 0.2s;font-family:inherit}
 .loan-edit-btn{background:#ebf8ff;color:#2b6cb0}
 .loan-edit-btn:hover{background:#bee3f8}
@@ -428,12 +430,15 @@
   </div>
 </div>
 
-<!-- ====== 视图：错误日志总结 ====== -->
+<!-- ====== 视图：错误总结日志 ====== -->
 <div id="view-errorlog" style="display:none">
   <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>⚠️ 错误总结日志</h1><p>Supabase 云端 · 多人共享 · 历史教训防重犯</p></div></div>
   <div class="stats-container">
     <div class="stats-toolbar">
       <div class="toolbar-left">
+        <select id="errorlog-filter-type" class="errorlog-filter" onchange="ErrorLogStats.setFilterType(this.value)"><option value="">全部类型</option></select>
+        <select id="errorlog-filter-severity" class="errorlog-filter" onchange="ErrorLogStats.setFilterSeverity(this.value)"><option value="">全部程度</option></select>
+        <button class="loan-action-btn loan-del-btn" id="errorlog-filter-clear" onclick="ErrorLogStats.clearFilters()" style="display:none">✕ 清空筛选</button>
         <span style="color:#718096;font-size:13px" id="errorlog-info"></span>
         <span class="auto-save-indicator" id="errorlog-save-status">已同步</span>
         <span class="loan-color-legend"><span><span class="loan-color-dot" style="background:#fed7d7"></span>高</span><span><span class="loan-color-dot" style="background:#fefcbf"></span>中</span><span><span class="loan-color-dot" style="background:#c6f6d5"></span>低</span></span>
@@ -1055,26 +1060,59 @@ document.getElementById(stage+'-save-status').style.display='none';
   var ErrorLogStats={
     _cache:[],
     _editing:null,
+    _filterType:'',
+    _filterSeverity:'',
+    _filtersInit:false,
+
+    initFilters(){
+      if(this._filtersInit)return;
+      this._filtersInit=true;
+      var t=document.getElementById('errorlog-filter-type');
+      var o='<option value="">全部类型</option>';
+      for(var i=0;i<BIZ_TYPES.length;i++)o+='<option value="'+BIZ_TYPES[i]+'">'+BIZ_TYPES[i]+'</option>';
+      t.innerHTML=o;
+      var s=document.getElementById('errorlog-filter-severity');
+      var o2='<option value="">全部程度</option>';
+      for(var j=0;j<SEVERITIES.length;j++)o2+='<option value="'+SEVERITIES[j]+'">'+SEVERITIES[j]+'</option>';
+      s.innerHTML=o2;
+    },
+
+    setFilterType(v){this._filterType=v;this.render()},
+    setFilterSeverity(v){this._filterSeverity=v;this.render()},
+    clearFilters(){
+      this._filterType='';this._filterSeverity='';
+      document.getElementById('errorlog-filter-type').value='';
+      document.getElementById('errorlog-filter-severity').value='';
+      this.render();
+    },
 
     async load(){
       try{this._cache=await errorLogGetAll()||[]}catch(e){this._cache=[]}
     },
 
     async render(){
+      this.initFilters();
       document.getElementById('errorlog-save-status').style.display='none';
       await this.load();
       var data=errorLogSort(this._cache);
-      document.getElementById('errorlog-info').textContent='共 '+data.length+' 条';
+      var ft=this._filterType,fs=this._filterSeverity;
+      var filtered=(ft||fs)?data.filter(function(r){
+        if(ft&&(r.biz_type||'')!==ft)return false;
+        if(fs&&(r.severity||'')!==fs)return false;
+        return true;
+      }):data;
+      document.getElementById('errorlog-info').textContent=(ft||fs)?('共 '+data.length+' 条 / 筛选出 '+filtered.length+' 条'):('共 '+data.length+' 条');
+      document.getElementById('errorlog-filter-clear').style.display=(ft||fs)?'inline-block':'none';
       var tbody=document.getElementById('errorlog-tbody');
-      if(!data.length){
-        tbody.innerHTML='<tr><td colspan="8" class="empty-hint">暂无记录，点击「＋ 添加记录」开始</td></tr>';
+      if(!filtered.length){
+        tbody.innerHTML='<tr><td colspan="8" class="empty-hint">'+(data.length?'无符合筛选条件的记录，可点「✕ 清空筛选」恢复':'暂无记录，点击「＋ 添加记录」开始')+'</td></tr>';
         document.getElementById('errorlog-save-status').textContent='已同步';
         document.getElementById('errorlog-save-status').style.display='inline';
         return;
       }
       var html='';
-      for(var i=0;i<data.length;i++){
-        var r=data[i];
+      for(var i=0;i<filtered.length;i++){
+        var r=filtered[i];
         var isEditing=this._editing===r.id;
         html+='<tr class="'+errorLogRowClass(r.severity)+'">';
         if(isEditing){
