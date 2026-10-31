@@ -1117,7 +1117,7 @@ document.getElementById(stage+'-save-status').style.display='none';
         html+='<tr class="'+errorLogRowClass(r.severity)+'">';
         if(isEditing){
           html+='<td><button class="loan-action-btn loan-save-btn" onclick="ErrorLogStats.saveEdit('+r.id+')">💾 保存</button><button class="loan-action-btn loan-del-btn" onclick="ErrorLogStats.cancelEdit()">✕</button></td>';
-          html+='<td><input type="text" id="errorlog-edit-bizName" value="'+escHtml(r.biz_name||'')+'"></td>';
+          html+='<td><input type="text" id="errorlog-edit-bizName" autocomplete="off" value="'+escHtml(r.biz_name||'')+'"></td>';
           html+='<td><input type="date" id="errorlog-edit-occurDate" value="'+escHtml(r.occur_date||'')+'"></td>';
           html+='<td><select id="errorlog-edit-bizType">'+bizTypeOpts(r.biz_type)+'</select></td>';
           html+='<td><select id="errorlog-edit-severity">'+severityOpts(r.severity||'中')+'</select></td>';
