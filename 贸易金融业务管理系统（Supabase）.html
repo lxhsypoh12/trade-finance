@@ -386,6 +386,8 @@
 .guide-note-editor:focus{outline:none;border-color:#b7791f}
 .guide-note-save{background:#38a169;color:#fff;border:none;border-radius:4px;padding:4px 12px;font-size:12px;cursor:pointer;margin-right:6px;font-family:inherit}
 .guide-note-cancel{background:#a0aec0;color:#fff;border:none;border-radius:4px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit}
+.guide-errorlog-btn{background:#c53030;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.guide-errorlog-btn:hover{background:#9b2c2c}
 .loan-action-btn{padding:3px 8px;border:none;border-radius:4px;font-size:11px;cursor:pointer;margin:0 1px;transition:background 0.2s;font-family:inherit}
 .loan-edit-btn{background:#ebf8ff;color:#2b6cb0}
 .loan-edit-btn:hover{background:#bee3f8}
@@ -481,9 +483,10 @@
 
 <!-- ====== 视图：业务模式指南（业务详情） ====== -->
 <div id="view-guide-detail" style="display:none">
-  <div class="header"><span class="back-link" onclick="Guide.renderListBack()">← 返回业务模式指南</span><div class="header-text"><h1 id="guide-detail-title"></h1><p>业务流程全景 · 每个环节的注意事项</p></div></div>
+  <div class="header"><span class="back-link" onclick="Guide.renderListBack()">← 返回业务模式指南</span><div class="header-text"><h1 id="guide-detail-title"></h1><p>业务流程全景 · 每个环节的注意事项</p></div><button class="guide-errorlog-btn" onclick="Guide.showErrorLogs()">⚠️ 查看该业务的错误记录</button></div>
   <div class="stats-container">
     <div id="guide-flow"></div>
+    <div style="text-align:center;margin:24px 0 8px"><button class="guide-errorlog-btn" onclick="Guide.showErrorLogs()">⚠️ 查看该业务的错误记录</button></div>
   </div>
 </div>
 
@@ -524,6 +527,15 @@
 .profit-fallback-note button{margin-left:8px;padding:3px 10px;background:#d69e2e;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer}
 .profit-seg-note{padding:16px;text-align:center;color:#a0aec0;font-size:13px}
 .material-list-title{font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:8px}
+.modal-errorlog-count{font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:10px}
+.modal-errorlog-item{border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff}
+.modal-errorlog-item-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.modal-errorlog-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.modal-errorlog-name{font-size:13px;font-weight:700;color:#2d3748}
+.modal-errorlog-meta{font-size:12px;color:#718096}
+.modal-errorlog-sec{font-size:12px;color:#4a5568;line-height:1.6;margin-top:4px;white-space:pre-wrap;word-break:break-word}
+.modal-errorlog-sec b{color:#1e3a5f}
+.modal-errorlog-empty{padding:24px;text-align:center;color:#a0aec0;font-size:13px}
 </style>
 <div class="modal-overlay" id="modal-materials">
   <div class="modal-box">
@@ -543,6 +555,17 @@
       <button class="modal-close" onclick="Stats.closeProfitDetail()">✕</button>
     </div>
     <div class="modal-body" id="modal-profit-body">
+      <div style="text-align:center;color:#a0aec0;padding:20px">加载中...</div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-errorlog">
+  <div class="modal-box" style="width:640px">
+    <div class="modal-header">
+      <h3>⚠️ 历史错误记录</h3>
+      <button class="modal-close" onclick="Guide.closeErrorLogs()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-errorlog-body">
       <div style="text-align:center;color:#a0aec0;padding:20px">加载中...</div>
     </div>
   </div>
@@ -1221,6 +1244,13 @@ document.getElementById(stage+'-save-status').style.display='none';
       this._cache=this._cache.filter(function(r){return r.id!==id});
       if(this._editing===id)this._editing=null;
       this.render();
+    },
+
+    async showFiltered(bizTypes){
+      var rows=[];
+      try{rows=await errorLogGetAll()||[]}catch(e){rows=[]}
+      rows=rows.filter(function(r){return bizTypes&&bizTypes.indexOf(r.biz_type)>-1});
+      return errorLogSort(rows);
     }
   };
 
@@ -1363,6 +1393,38 @@ document.getElementById(stage+'-save-status').style.display='none';
       try{await guideNotesDelete(id)}catch(e){alert('删除失败：'+e.message)}
       await this._reloadNotes();
       this.renderDetail();
+    },
+
+    async showErrorLogs(){
+      var g=GUIDE_DATA[this._current];
+      if(!g)return;
+      var body=document.getElementById('modal-errorlog-body');
+      body.innerHTML='<div style="text-align:center;color:#a0aec0;padding:20px">加载中...</div>';
+      document.getElementById('modal-errorlog').className='modal-overlay active';
+      var rows=await ErrorLogStats.showFiltered(g.linkedBizTypes||[]);
+      var h='';
+      if(rows.length===0){
+        h='<div class="modal-errorlog-empty">该业务暂无错误记录</div>';
+      }else{
+        h='<div class="modal-errorlog-count">共 '+rows.length+' 条</div>';
+        for(var i=0;i<rows.length;i++){
+          var r=rows[i];
+          var dot=r.severity==='高'?'#e53e3e':(r.severity==='低'?'#38a169':'#d69e2e');
+          h+='<div class="modal-errorlog-item">';
+          h+='<div class="modal-errorlog-item-head"><span class="modal-errorlog-dot" style="background:'+dot+'"></span>'
+            +'<span class="modal-errorlog-name">'+escHtml(r.biz_name||'(未命名)')+'</span>'
+            +'<span class="modal-errorlog-meta">'+escHtml(r.occur_date||'无日期')+' · '+escHtml(r.biz_type||'')+' · 程度：'+escHtml(r.severity||'中')+'</span></div>';
+          if(r.error_content)h+='<div class="modal-errorlog-sec"><b>错误内容：</b>'+escHtml(r.error_content)+'</div>';
+          if(r.consequence)h+='<div class="modal-errorlog-sec"><b>导致后果：</b>'+escHtml(r.consequence)+'</div>';
+          if(r.solution)h+='<div class="modal-errorlog-sec"><b>解决方案：</b>'+escHtml(r.solution)+'</div>';
+          h+='</div>';
+        }
+      }
+      body.innerHTML=h;
+    },
+
+    closeErrorLogs(){
+      document.getElementById('modal-errorlog').className='modal-overlay';
     },
 
     renderListBack(){showView('guide')}
