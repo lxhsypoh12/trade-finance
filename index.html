@@ -373,6 +373,19 @@
 .guide-step-desc{font-size:13px;color:#4a5568;line-height:1.7}
 .guide-step-meta{font-size:12px;color:#718096;margin-top:4px}
 .guide-arrow{text-align:center;color:#319795;font-size:18px;margin:6px 0;line-height:1}
+.guide-notes{margin-top:12px;padding-top:10px;border-top:1px dashed #e2e8f0}
+.guide-notes-title{font-size:12px;font-weight:700;color:#975a16;margin-bottom:6px}
+.guide-note{background:#fefcbf;border-radius:6px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px}
+.guide-note-text{flex:1;font-size:13px;color:#5f4700;white-space:pre-wrap;word-break:break-word;line-height:1.6}
+.guide-note-actions{display:flex;gap:2px;flex-shrink:0}
+.guide-note-btn{border:none;background:transparent;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:4px;line-height:1}
+.guide-note-btn:hover{background:rgba(0,0,0,0.1)}
+.guide-note-add{border:1px dashed #d69e2e;background:transparent;color:#975a16;font-size:12px;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:inherit}
+.guide-note-add:hover{background:#fefcbf}
+.guide-note-editor{width:100%;box-sizing:border-box;border:1px solid #d69e2e;border-radius:6px;padding:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:52px;margin-bottom:6px;background:#fffdf5}
+.guide-note-editor:focus{outline:none;border-color:#b7791f}
+.guide-note-save{background:#38a169;color:#fff;border:none;border-radius:4px;padding:4px 12px;font-size:12px;cursor:pointer;margin-right:6px;font-family:inherit}
+.guide-note-cancel{background:#a0aec0;color:#fff;border:none;border-radius:4px;padding:4px 12px;font-size:12px;cursor:pointer;font-family:inherit}
 .loan-action-btn{padding:3px 8px;border:none;border-radius:4px;font-size:11px;cursor:pointer;margin:0 1px;transition:background 0.2s;font-family:inherit}
 .loan-edit-btn{background:#ebf8ff;color:#2b6cb0}
 .loan-edit-btn:hover{background:#bee3f8}
@@ -1069,6 +1082,14 @@ document.getElementById(stage+'-save-status').style.display='none';
   function errorLogUpdate(id,fields){return fetch(ERROR_LOG_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:ERROR_LOG_KEY,Authorization:'Bearer '+ERROR_LOG_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
   function errorLogDelete(id){return fetch(ERROR_LOG_API+'?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{apikey:ERROR_LOG_KEY,Authorization:'Bearer '+ERROR_LOG_KEY}})}
 
+  // ===== Supabase 指南注意事项 CRUD =====
+  var GUIDE_NOTES_API='https://jpcjwhyotcrhxstzwzid.supabase.co/rest/v1/guide_notes';
+  var GUIDE_NOTES_KEY=SB_KEY;
+  function guideNotesGetAll(){return fetch(GUIDE_NOTES_API+'?order=created_at.asc',{headers:{apikey:GUIDE_NOTES_KEY,Authorization:'Bearer '+GUIDE_NOTES_KEY}}).then(function(r){return r.json()})}
+  function guideNotesInsert(record){return fetch(GUIDE_NOTES_API,{method:'POST',headers:{apikey:GUIDE_NOTES_KEY,Authorization:'Bearer '+GUIDE_NOTES_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(record)}).then(function(r){return r.json()})}
+  function guideNotesUpdate(id,fields){return fetch(GUIDE_NOTES_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:GUIDE_NOTES_KEY,Authorization:'Bearer '+GUIDE_NOTES_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
+  function guideNotesDelete(id){return fetch(GUIDE_NOTES_API+'?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{apikey:GUIDE_NOTES_KEY,Authorization:'Bearer '+GUIDE_NOTES_KEY}})}
+
   var SEVERITIES=['高','中','低'];
   function severityOpts(sel){var o='<option value="">选择程度</option>';for(var i=0;i<SEVERITIES.length;i++)o+='<option value="'+SEVERITIES[i]+'"'+(sel===SEVERITIES[i]?' selected':'')+'>'+SEVERITIES[i]+'</option>';return o}
   function errorLogRowClass(sev){return sev==='高'?'loan-row-red':(sev==='低'?'loan-row-green':'loan-row-yellow')}
@@ -1225,6 +1246,9 @@ document.getElementById(stage+'-save-status').style.display='none';
 
   var Guide={
     _current:null,
+    _notes:[],
+    _editingNote:null,
+    _addingStep:null,
 
     renderList(){
       var html='';
@@ -1235,10 +1259,18 @@ document.getElementById(stage+'-save-status').style.display='none';
       document.getElementById('guide-cards').innerHTML=html;
     },
 
-    showDetail(key){
+    async showDetail(key){
       if(!GUIDE_DATA[key])return;
       this._current=key;
+      this._editingNote=null;
+      this._addingStep=null;
+      await this._reloadNotes();
       showView('guide-detail');
+    },
+
+    async _reloadNotes(){
+      var key=this._current;
+      try{var all=await guideNotesGetAll()||[];this._notes=all.filter(function(n){return n.guide_key===key})}catch(e){this._notes=[]}
     },
 
     renderDetail(){
@@ -1254,11 +1286,83 @@ document.getElementById(stage+'-save-status').style.display='none';
         if(s.actor)html+='<div class="guide-step-meta">👤 经办方：'+escHtml(s.actor)+'</div>';
         if(s.docs&&s.docs.length)html+='<div class="guide-step-meta">📎 本环节资料：'+escHtml(s.docs.join('、'))+'</div>';
         if(s.branch)html+='<div class="guide-step-meta">🔀 分支：'+escHtml(s.branch)+'</div>';
-        html+='<div class="guide-notes" id="guide-notes-'+s.key+'"></div>';
+        html+='<div class="guide-notes" id="guide-notes-'+s.key+'">'+this._renderNotesHtml(s.key)+'</div>';
         html+='</div>';
         if(i<g.steps.length-1)html+='<div class="guide-arrow">▼</div>';
       }
       document.getElementById('guide-flow').innerHTML=html;
+    },
+
+    _renderNotesHtml(stepKey){
+      var notes=this._notes.filter(function(n){return n.step_key===stepKey});
+      var h='<div class="guide-notes-title">⚠️ 注意事项（'+notes.length+'）</div>';
+      for(var i=0;i<notes.length;i++){
+        var n=notes[i];
+        if(this._editingNote===n.id){
+          h+='<textarea class="guide-note-editor" id="guide-note-edit-'+n.id+'" rows="2" autocomplete="off">'+escHtml(n.content||'')+'</textarea>';
+          h+='<div><button class="guide-note-save" onclick="Guide.saveNote('+n.id+')">💾 保存</button><button class="guide-note-cancel" onclick="Guide.cancelEditNote()">✕ 取消</button></div>';
+        }else{
+          h+='<div class="guide-note"><span class="guide-note-text">'+escHtml(n.content||'')+'</span><span class="guide-note-actions">'
+            +'<button class="guide-note-btn" title="编辑" onclick="Guide.startEditNote('+n.id+')">✎</button>'
+            +'<button class="guide-note-btn" title="删除" onclick="Guide.deleteNote('+n.id+')">🗑</button></span></div>';
+        }
+      }
+      if(this._addingStep===stepKey){
+        h+='<textarea class="guide-note-editor" id="guide-note-new" rows="2" autocomplete="off" placeholder="输入注意事项内容…"></textarea>';
+        h+='<div><button class="guide-note-save" onclick="Guide.saveNote(null)">💾 保存</button><button class="guide-note-cancel" onclick="Guide.cancelEditNote()">✕ 取消</button></div>';
+      }else{
+        h+='<button class="guide-note-add" onclick="Guide.addNote(\''+stepKey+'\')">＋ 添加注意事项</button>';
+      }
+      return h;
+    },
+
+    addNote(stepKey){
+      this._addingStep=stepKey;
+      this._editingNote=null;
+      this.renderDetail();
+      var el=document.getElementById('guide-note-new');
+      if(el)el.focus();
+    },
+
+    startEditNote(id){
+      this._editingNote=id;
+      this._addingStep=null;
+      this.renderDetail();
+    },
+
+    cancelEditNote(){
+      this._editingNote=null;
+      this._addingStep=null;
+      this.renderDetail();
+    },
+
+    async saveNote(id){
+      var content;
+      if(id){
+        var el=document.getElementById('guide-note-edit-'+id);
+        if(!el)return;
+        content=(el.value||'').trim();
+        if(!content){alert('注意事项内容不能为空');return}
+        try{await guideNotesUpdate(id,{content:content})}catch(e){alert('保存失败：'+e.message);return}
+      }else{
+        if(!this._addingStep)return;
+        var el2=document.getElementById('guide-note-new');
+        if(!el2)return;
+        content=(el2.value||'').trim();
+        if(!content){alert('注意事项内容不能为空');return}
+        try{await guideNotesInsert({guide_key:this._current,step_key:this._addingStep,content:content})}catch(e){alert('添加失败：'+e.message);return}
+      }
+      this._editingNote=null;
+      this._addingStep=null;
+      await this._reloadNotes();
+      this.renderDetail();
+    },
+
+    async deleteNote(id){
+      if(!confirm('确认删除这条注意事项？\n（此操作不可恢复）'))return;
+      try{await guideNotesDelete(id)}catch(e){alert('删除失败：'+e.message)}
+      await this._reloadNotes();
+      this.renderDetail();
     },
 
     renderListBack(){showView('guide')}
