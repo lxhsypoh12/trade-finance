@@ -90,6 +90,7 @@
   .home-card.card-stats-loan { border-top-color: #d69e2e; }
   .home-card.card-stats-subsidiary { border-top-color: #2b6cb0; }
   .home-card.card-errorlog { border-top-color: #c53030; }
+  .home-card.card-guide { border-top-color: #319795; }
   .home-card .icon { font-size: 48px; margin-bottom: 16px; }
   .home-card h2 { font-size: 18px; color: #2d3748; margin-bottom: 8px; }
   .home-card p  { font-size: 13px; color: #718096; line-height: 1.6; }
@@ -258,6 +259,7 @@
       <div class="home-card card-stats-loan" onclick="showView('stats-loan')"><div class="icon">💰</div><h2>贸易子公司贷款类业务统计</h2><p>贷款到期跟踪 / 颜色预警 / 飞书提醒</p></div>
       <div class="home-card card-stats-subsidiary" onclick="showView('stats-subsidiary')"><div class="icon">🏢</div><h2>贸易子公司统计</h2><p>公司信息 / 注册资本 / 社保 / 发票额度</p></div>
       <div class="home-card card-errorlog" onclick="showView('errorlog')"><div class="icon">⚠️</div><h2>错误总结日志</h2><p>历史错误记录 / 后果 / 解决方案</p></div>
+      <div class="home-card card-guide" onclick="showView('guide')"><div class="icon">📖</div><h2>业务模式指南</h2><p>业务全流程图 / 环节注意事项</p></div>
     </div>
   </div>
 </div>
@@ -364,6 +366,13 @@
 .stats-table textarea:focus{border-color:#3182ce;outline:none;box-shadow:0 0 0 2px rgba(49,130,206,0.12)}
 .errorlog-filter{padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;color:#2d3748;background:#fff;cursor:pointer;font-family:inherit}
 .errorlog-filter:focus{border-color:#3182ce;outline:none}
+.guide-step{background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,0.08);padding:16px 20px;max-width:760px;margin:0 auto;border-left:4px solid #319795}
+.guide-step-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.guide-step-num{width:26px;height:26px;border-radius:50%;background:#319795;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.guide-step-name{font-size:15px;font-weight:700;color:#1e3a5f}
+.guide-step-desc{font-size:13px;color:#4a5568;line-height:1.7}
+.guide-step-meta{font-size:12px;color:#718096;margin-top:4px}
+.guide-arrow{text-align:center;color:#319795;font-size:18px;margin:6px 0;line-height:1}
 .loan-action-btn{padding:3px 8px;border:none;border-radius:4px;font-size:11px;cursor:pointer;margin:0 1px;transition:background 0.2s;font-family:inherit}
 .loan-edit-btn{background:#ebf8ff;color:#2b6cb0}
 .loan-edit-btn:hover{background:#bee3f8}
@@ -449,6 +458,22 @@
   </div>
 </div>
 
+<!-- ====== 视图：业务模式指南（卡片列表） ====== -->
+<div id="view-guide" style="display:none">
+  <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>📖 业务模式指南</h1><p>业务全流程图 · 环节注意事项 · 历史错误联动</p></div></div>
+  <div class="stats-container">
+    <div class="home-cards" id="guide-cards"></div>
+  </div>
+</div>
+
+<!-- ====== 视图：业务模式指南（业务详情） ====== -->
+<div id="view-guide-detail" style="display:none">
+  <div class="header"><span class="back-link" onclick="Guide.renderListBack()">← 返回业务模式指南</span><div class="header-text"><h1 id="guide-detail-title"></h1><p>业务流程全景 · 每个环节的注意事项</p></div></div>
+  <div class="stats-container">
+    <div id="guide-flow"></div>
+  </div>
+</div>
+
 <!-- ====== 资料清单弹窗 ====== -->
 <style>
 .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:1000;justify-content:center;align-items:center}
@@ -528,7 +553,7 @@
   function fmtPct(v){return v.toFixed(3)+'%';}
 
   window.showView=function(view){
-    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done'),loan:document.getElementById('view-stats-loan'),subsidiary:document.getElementById('view-stats-subsidiary'),errorlog:document.getElementById('view-errorlog')};
+    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done'),loan:document.getElementById('view-stats-loan'),subsidiary:document.getElementById('view-stats-subsidiary'),errorlog:document.getElementById('view-errorlog'),guide:document.getElementById('view-guide'),guideDetail:document.getElementById('view-guide-detail')};
     Object.values(els).forEach(function(e){if(e)e.style.display='none';});
     if(view==='home'){saveInputs(currentCalcType);els.home.style.display='block';}
     else if(view==='bill'||view==='lc'){saveInputs(currentCalcType);currentCalcType=view;applyLabels(view);restoreInputs(view);els.calc.style.display='block';recalc();}
@@ -539,6 +564,8 @@
     else if(view==='stats-loan'){if(els.loan){els.loan.style.display='block';LoanStats.render();}}
     else if(view==='stats-subsidiary'){if(els.subsidiary){els.subsidiary.style.display='block';SubsidiaryStats.render();}}
     else if(view==='errorlog'){if(els.errorlog){els.errorlog.style.display='block';ErrorLogStats.render();}}
+    else if(view==='guide'){if(els.guide){els.guide.style.display='block';Guide.renderList();}}
+    else if(view==='guide-detail'){if(els.guideDetail){els.guideDetail.style.display='block';Guide.renderDetail();}}
   };
 
   function saveInputs(type){var s={};allInputs.forEach(function(el){s[el.id]=el.value;});inputState[type]=s;}
@@ -1176,6 +1203,67 @@ document.getElementById(stage+'-save-status').style.display='none';
     }
   };
 
+  // ===== 业务模式指南（流程结构固定，注意事项存 guide_notes 表） =====
+  var GUIDE_DATA={
+    'entrusted-pay':{title:'受托支付',icon:'🔀',linkedBizTypes:['跑量/受托支付'],steps:[
+      {key:'s1',name:'环节一（占位）',desc:'占位内容：待业务素材（手画流程图+文字说明）到位后，替换为正式环节说明。',actor:'',docs:[],branch:null},
+      {key:'s2',name:'环节二（占位）',desc:'占位内容：待业务素材到位后替换。',actor:'',docs:[],branch:null},
+      {key:'s3',name:'环节三（占位）',desc:'占位内容：待业务素材到位后替换。',actor:'',docs:[],branch:null}
+    ]},
+    'city-cp-pledge':{title:'城投商票质押贷款',icon:'🏦',linkedBizTypes:['商票质押贷款'],steps:[
+      {key:'s1',name:'环节一（占位）',desc:'占位内容：待业务素材（手画流程图+文字说明）到位后，替换为正式环节说明。',actor:'',docs:[],branch:null},
+      {key:'s2',name:'环节二（占位）',desc:'占位内容：待业务素材到位后替换。',actor:'',docs:[],branch:null},
+      {key:'s3',name:'环节三（占位）',desc:'占位内容：待业务素材到位后替换。',actor:'',docs:[],branch:null},
+      {key:'s4',name:'环节四（占位）',desc:'占位内容：待业务素材到位后替换。',actor:'',docs:[],branch:null}
+    ]},
+    'personal-cd-pledge':{title:'个人存单质押贷款',icon:'💳',linkedBizTypes:['存单质押贷款'],steps:[
+      {key:'s1',name:'环节一（占位）',desc:'占位内容：待业务素材（手画流程图+文字说明）到位后，替换为正式环节说明。',actor:'',docs:[],branch:null},
+      {key:'s2',name:'环节二（占位）',desc:'占位内容：待业务素材到位后替换。',actor:'',docs:[],branch:null},
+      {key:'s3',name:'环节三（占位）',desc:'占位内容：待业务素材到位后替换。',actor:'',docs:[],branch:null}
+    ]}
+  };
+
+  var Guide={
+    _current:null,
+
+    renderList(){
+      var html='';
+      for(var key in GUIDE_DATA){
+        var g=GUIDE_DATA[key];
+        html+='<div class="home-card card-guide" onclick="Guide.showDetail(\''+key+'\')"><div class="icon">'+g.icon+'</div><h2>'+escHtml(g.title)+'</h2><p>点击查看业务流程 →</p></div>';
+      }
+      document.getElementById('guide-cards').innerHTML=html;
+    },
+
+    showDetail(key){
+      if(!GUIDE_DATA[key])return;
+      this._current=key;
+      showView('guide-detail');
+    },
+
+    renderDetail(){
+      var g=GUIDE_DATA[this._current];
+      if(!g)return;
+      document.getElementById('guide-detail-title').innerHTML=g.icon+' '+escHtml(g.title);
+      var html='';
+      for(var i=0;i<g.steps.length;i++){
+        var s=g.steps[i];
+        html+='<div class="guide-step" id="guide-step-'+s.key+'">';
+        html+='<div class="guide-step-head"><span class="guide-step-num">'+(i+1)+'</span><span class="guide-step-name">'+escHtml(s.name)+'</span></div>';
+        html+='<div class="guide-step-desc">'+escHtml(s.desc)+'</div>';
+        if(s.actor)html+='<div class="guide-step-meta">👤 经办方：'+escHtml(s.actor)+'</div>';
+        if(s.docs&&s.docs.length)html+='<div class="guide-step-meta">📎 本环节资料：'+escHtml(s.docs.join('、'))+'</div>';
+        if(s.branch)html+='<div class="guide-step-meta">🔀 分支：'+escHtml(s.branch)+'</div>';
+        html+='<div class="guide-notes" id="guide-notes-'+s.key+'"></div>';
+        html+='</div>';
+        if(i<g.steps.length-1)html+='<div class="guide-arrow">▼</div>';
+      }
+      document.getElementById('guide-flow').innerHTML=html;
+    },
+
+    renderListBack(){showView('guide')}
+  };
+
   // ===== Supabase 贸易子公司统计 CRUD =====
   var SUBSIDIARY_API='https://jpcjwhyotcrhxstzwzid.supabase.co/rest/v1/subsidiary_companies';
   var SUBSIDIARY_KEY=SB_KEY;
@@ -1307,6 +1395,7 @@ document.getElementById(stage+'-save-status').style.display='none';
   window.LoanStats = LoanStats;
   window.SubsidiaryStats = SubsidiaryStats;
   window.ErrorLogStats = ErrorLogStats;
+  window.Guide = Guide;
   if(qElType)qElType.addEventListener('change',recalcQuote);
   applyLabels('bill');
   showView('home');
