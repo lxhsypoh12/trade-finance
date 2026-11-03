@@ -692,10 +692,11 @@
   var SEG_ITEMS={'咨询':{income:[['service_fee','服务费收入'],['other','其他收入']],expense:[['service_provider','服务商支出'],['other','其他支出']]},'自营':{income:[['service_fee','服务费收入'],['deposit_interest','存款利息收入'],['post_interest','后置利息收入'],['other','其他收入']],expense:[['service_provider','服务商支出'],['discount','贴现/议付支出'],['capital_occupy','资金占用支出'],['guarantee_fee','担保费'],['loan_interest','贷款利息'],['retained_profit','留存利润支出'],['handling_fee','手续费支出'],['other','其他支出']]}};
   function parseDetail(r){try{var d=JSON.parse(r.profit_detail||'');return(d&&typeof d==='object')?d:null}catch(e){return null}}
   function effProfit(r){var d=parseDetail(r);if(d){var s=0,k,inc=d.income||{},exp=d.expense||{};for(k in inc)s+=parseFloat(inc[k])||0;for(k in exp)s-=parseFloat(exp[k])||0;return s}return(parseFloat(r.actual_revenue||0)-parseFloat(r.actual_cost||0))}
+  function doneTimeVal(r){var m=String((r&&r.time)||'').match(/(\d{4})\D*(\d{1,2})?\D*(\d{1,2})?/);if(!m)return 0;return parseInt(m[1],10)*10000+(parseInt(m[2],10)||0)*100+(parseInt(m[3],10)||0)}
   function escHtml(s){if(s===null||s===undefined)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 
   var Stats={_cache:{bid:[],win:[],done:[]},
-    async load(stage){try{this._cache[stage]=await sbGet(stage)||[]}catch(e){this._cache[stage]=[]}},
+    async load(stage){try{this._cache[stage]=await sbGet(stage)||[];if(stage==='done')this._cache[stage].sort(function(a,b){return doneTimeVal(b)-doneTimeVal(a)})}catch(e){this._cache[stage]=[]}},
     async updateRecord(id,fields){try{await sbUpdate(id,fields)}catch(e){}},
     async deleteRecords(ids){try{await sbDelete(ids)}catch(e){}},
 
@@ -744,7 +745,7 @@ document.getElementById(stage+'-save-status').style.display='none';
         if(row){var ep=parseFloat(row.win_amount||0)*parseFloat(row.win_rate||0)/100||0;row.est_profit=ep}
         this.render('win');
       }
-      if(stage==='done'&&(field==='actual_cost'||field==='actual_revenue'||field==='business_segment')){this.render('done');}
+      if(stage==='done'&&(field==='actual_cost'||field==='actual_revenue'||field==='business_segment'||field==='time')){this.render('done');}
     },
 
     toggleQuotes(id){var el=document.getElementById('quotes-'+id);el.style.display=el.style.display==='none'?'':'none';if(el.style.display!=='none')this.renderQuotes(id)},
