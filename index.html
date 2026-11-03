@@ -1309,9 +1309,9 @@ document.getElementById(stage+'-save-status').style.display='none';
       },
       nodeNames:{up:'上游',down:'下游',A:'A',B:'B',C:'C',bank:'银行',guar:'担保公司',chengtou:'城投',consult:'咨询主体',funder:'资方'},
       layouts:{
-        p1:{nodes:{bank:[200,40],guar:[520,40],up:[40,200],A:[150,200],B:[360,200],C:[560,200],down:[720,200],chengtou:[560,320],consult:[300,320],funder:[300,405]},context:[['up','A','货'],['A','B','货'],['B','C','货'],['C','down','货']]},
-        p2:{nodes:{guar:[380,40],chengtou:[600,40],up:[40,200],A:[150,200],B:[360,200],C:[560,200],down:[720,200],consult:[360,320],funder:[360,405]},context:[['up','A','货'],['A','B','货'],['B','C','货'],['C','down','货']]},
-        p3:{nodes:{bank:[200,40],guar:[430,40],chengtou:[640,40],up:[40,200],A:[150,200],B:[360,200],C:[560,200],down:[720,200],consult:[430,320],funder:[430,405]},context:[['up','A','货'],['A','B','货'],['B','C','货'],['C','down','货']]}
+        p1:{nodes:{bank:[150,40],guar:[360,40],up:[40,200],A:[150,200],B:[360,200],C:[560,200],down:[720,200],chengtou:[560,320],consult:[360,320],funder:[360,405]},context:[['up','A','货'],['A','B','货'],['B','C','货'],['C','down','货']]},
+        p2:{nodes:{guar:[360,40],chengtou:[560,40],up:[40,200],A:[150,200],B:[360,200],C:[560,200],down:[720,200],consult:[360,320],funder:[360,405]},context:[['up','A','货'],['A','B','货'],['B','C','货'],['C','down','货']]},
+        p3:{nodes:{bank:[150,40],guar:[360,40],chengtou:[560,40],up:[40,200],A:[150,200],B:[360,200],C:[560,200],down:[720,200],consult:[360,320],funder:[360,405]},context:[['up','A','货'],['A','B','货'],['B','C','货'],['C','down','货']]}
       },
       groupNote:'平账环节：贷款发放后A与咨询主体、C与咨询主体之间仍存在一笔借款未平账，需后期通过与上、下游公司的真实贸易环节完成',
       steps:[
@@ -1479,14 +1479,17 @@ document.getElementById(stage+'-save-status').style.display='none';
       var labels='';
       for(var e2=0;e2<edges.length;e2++){
         var ed=edges[e2];
-        var grp=groups[[ed.from,ed.to].slice().sort().join('|')];
+        var sk=[ed.from,ed.to].slice().sort();
+        var grp=groups[sk.join('|')];
         var gi=grp.indexOf(e2);
         var off=(gi-(grp.length-1)/2)*12;
         var pa=L.nodes[ed.from],pb=L.nodes[ed.to];
         if(!pa||!pb)continue;
+        var ca=L.nodes[sk[0]],cb=L.nodes[sk[1]];
+        var cdx=cb[0]-ca[0],cdy=cb[1]-ca[1];
+        var clen=Math.sqrt(cdx*cdx+cdy*cdy)||1;
+        var px=-cdy/clen,py=cdx/clen;
         var dx=pb[0]-pa[0],dy=pb[1]-pa[1];
-        var len=Math.sqrt(dx*dx+dy*dy)||1;
-        var px=-dy/len,py=dx/len;
         var s1=this._trimPt(pa,half[ed.from],dx,dy);
         var s2=this._trimPt(pb,half[ed.to],-dx,-dy);
         var ox=px*off,oy=py*off;
@@ -1495,7 +1498,8 @@ document.getElementById(stage+'-save-status').style.display='none';
         var mk=ed.ctx?mG:(ed.red?mR:mB);
         out+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+col+'" stroke-width="'+(ed.ctx?1.2:1.8)+'"'
           +(ed.ctx?' stroke-dasharray="5 4"':'')+' marker-end="url(#'+mk+')"/>';
-        var mx=((x1+x2)/2+px*12).toFixed(1),my=((y1+y2)/2+py*12).toFixed(1);
+        var ladd=off===0?12:(off>0?12:-12);
+        var mx=((x1+x2)/2+px*ladd).toFixed(1),my=((y1+y2)/2+py*ladd).toFixed(1);
         if(ed.ctx){
           labels+='<text x="'+mx+'" y="'+my+'" class="gfs-ctx">'+escHtml(ed.label)+'</text>';
         }else{
