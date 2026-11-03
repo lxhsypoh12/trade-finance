@@ -397,6 +397,13 @@
 .guide-divider small{display:block;font-weight:400;font-size:11px;color:#9b2c2c;margin-top:2px}
 .guide-step-tag{font-size:11px;background:#fed7d7;color:#9b2c2c;border-radius:4px;padding:2px 8px;font-weight:700;flex-shrink:0}
 .guide-step.is-tag{border-left-color:#c53030}
+.guide-flow-svg{display:block;max-width:760px;width:100%;margin:0 auto 6px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px}
+.gfs-node{font-size:13px;font-weight:700;fill:#1e3a5f}
+.gfs-no{font-size:11px;font-weight:700}
+.gfs-ctx{font-size:10px;fill:#a0aec0;text-anchor:middle}
+.gfs-edge{cursor:pointer}
+.guide-flow-legend{max-width:760px;margin:0 auto 14px;text-align:center;font-size:11px;color:#718096}
+.guide-step-flash{box-shadow:0 0 0 3px #3182ce,0 1px 6px rgba(0,0,0,0.12)!important}
 .guide-note-editor{width:100%;box-sizing:border-box;border:1px solid #d69e2e;border-radius:6px;padding:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:52px;margin-bottom:6px;background:#fffdf5}
 .guide-note-editor:focus{outline:none;border-color:#b7791f}
 .guide-note-save{background:#38a169;color:#fff;border:none;border-radius:4px;padding:4px 12px;font-size:12px;cursor:pointer;margin-right:6px;font-family:inherit}
@@ -1296,49 +1303,55 @@ document.getElementById(stage+'-save-status').style.display='none';
         essence:'本业务实质：由B作为借款人、担保公司作为实际担保人，帮助城投公司完成一笔新增融资；城投公司提供商票进行变相担保，并通过违约金向整个交易参与主体支付一笔费用。'
       },
       stages:{
-        p1:{title:'阶段一 · 放款',note:'触发：银行完成对B公司的贷款授信并向B放款',img:'业务模式指南素材/城投商票质押贷款资料/1.jpg'},
-        p2:{title:'阶段二 · 换票',note:'触发：贷款为1年期、商票为半年期，老商票到期前按本阶段流程置换质押物',img:'业务模式指南素材/城投商票质押贷款资料/2.jpg'},
-        p3:{title:'阶段三 · 还款',note:'触发：1年期银行贷款到期',img:'业务模式指南素材/城投商票质押贷款资料/3.jpg'}
+        p1:{title:'阶段一 · 放款',note:'触发：银行完成对B公司的贷款授信并向B放款'},
+        p2:{title:'阶段二 · 换票',note:'触发：贷款为1年期、商票为半年期，老商票到期前按本阶段流程置换质押物'},
+        p3:{title:'阶段三 · 还款',note:'触发：1年期银行贷款到期'}
+      },
+      nodeNames:{up:'上游',down:'下游',A:'A',B:'B',C:'C',bank:'银行',guar:'担保公司',chengtou:'城投',consult:'咨询主体',funder:'资方'},
+      layouts:{
+        p1:{nodes:{bank:[200,40],guar:[520,40],up:[40,200],A:[150,200],B:[360,200],C:[560,200],down:[720,200],chengtou:[560,320],consult:[300,320],funder:[300,405]},context:[['up','A','货'],['A','B','货'],['B','C','货'],['C','down','货']]},
+        p2:{nodes:{guar:[380,40],chengtou:[600,40],up:[40,200],A:[150,200],B:[360,200],C:[560,200],down:[720,200],consult:[360,320],funder:[360,405]},context:[['up','A','货'],['A','B','货'],['B','C','货'],['C','down','货']]},
+        p3:{nodes:{bank:[200,40],guar:[430,40],chengtou:[640,40],up:[40,200],A:[150,200],B:[360,200],C:[560,200],down:[720,200],consult:[430,320],funder:[430,405]},context:[['up','A','货'],['A','B','货'],['B','C','货'],['C','down','货']]}
       },
       groupNote:'平账环节：贷款发放后A与咨询主体、C与咨询主体之间仍存在一笔借款未平账，需后期通过与上、下游公司的真实贸易环节完成',
       steps:[
-        {key:'p1-1',stage:'p1',no:'①',name:'资方拆借资金给咨询主体',desc:'资方提供资金，以拆借款方式支付给咨询主体，启动整个交易框架。',actor:'资方',docs:[],branch:null},
-        {key:'p1-2',stage:'p1',no:'②',name:'咨询主体借款给C',desc:'咨询主体以借款方式，将资金支付给C。',actor:'咨询主体',docs:[],branch:null},
-        {key:'p1-3',stage:'p1',no:'③',name:'C预付货款给城投',desc:'C与城投公司签署贸易合同，并以预付货款方式将资金支付给城投。',actor:'C',docs:[],branch:null},
-        {key:'p1-4',stage:'p1',no:'④',name:'城投开具商票1给C',desc:'城投开具等额商票1作为贸易发货的担保提供给C；因实际不发货，C实际取得商票1。',actor:'城投公司',docs:[],branch:null},
-        {key:'p1-5',stage:'p1',no:'⑤',name:'C将商票1背书给B',desc:'C取得商票1后，以货款方式将商票1背书给B。',actor:'C',docs:[],branch:null},
-        {key:'p1-6',stage:'p1',no:'⑥',name:'B将商票1质押给担保公司',desc:'B取得商票1后，将该商票1作为反担保措施质押给担保公司。',actor:'B',docs:[],branch:null},
-        {key:'p1-7',stage:'p1',no:'⑦',name:'担保公司向银行提供担保',desc:'担保公司为B公司向银行申请的贷款提供担保。',actor:'担保公司',docs:[],branch:null},
-        {key:'p1-8',stage:'p1',no:'⑧',name:'银行受托支付放款给A',desc:'银行在与B公司签署借款合同、与担保公司签署担保合同后，以受托支付方式将贷款资金支付给A，作为B向A支付的货款。',actor:'银行',docs:['借款合同','担保合同','受托支付划款单据'],branch:null},
-        {key:'p1-9',stage:'p1',no:'⑨',name:'A借款划付给咨询主体',desc:'A公司将取得的贷款资金，以借款方式划付给咨询主体。',actor:'A',docs:[],branch:null},
-        {key:'p1-10',stage:'p1',no:'⑩',name:'咨询主体还款给资方',desc:'咨询公司取得资金后，将资金偿还给资方，过桥资金闭环。',actor:'咨询主体',docs:[],branch:null},
-        {key:'p1-11',stage:'p1',no:'⑪',tag:'平账',name:'下游支付货款给C',desc:'下游公司以现金、票据、贷款资金方式向C支付货款。',actor:'下游公司',docs:[],branch:null},
-        {key:'p1-12',stage:'p1',no:'⑫',tag:'平账',name:'C还款给咨询主体',desc:'C将货款偿还给咨询主体。',actor:'C',docs:[],branch:null},
-        {key:'p1-13',stage:'p1',no:'⑬',tag:'平账',name:'咨询主体还款给A',desc:'咨询主体再将资金偿还给A。',actor:'咨询主体',docs:[],branch:null},
-        {key:'p1-14',stage:'p1',no:'⑭',tag:'平账',name:'A支付货款给上游',desc:'A最后将资金作为货款支付给上游公司，本阶段平账完成。',actor:'A',docs:[],branch:null},
-        {key:'p2-1',stage:'p2',no:'①',name:'资方拆借资金给咨询主体',desc:'资方提供资金，以拆借款方式支付给咨询主体。',actor:'资方',docs:[],branch:null},
-        {key:'p2-2',stage:'p2',no:'②',name:'咨询主体借款给C',desc:'咨询主体以借款方式，将资金支付给C。',actor:'咨询主体',docs:[],branch:null},
-        {key:'p2-3',stage:'p2',no:'③',name:'C预付货款给城投',desc:'C以预付货款方式，将资金支付给城投。',actor:'C',docs:[],branch:null},
-        {key:'p2-4',stage:'p2',no:'④',name:'城投开具商票2给C',desc:'城投开具等额商票2作为贸易发货的担保提供给C；因实际不发货，C实际取得商票2。',actor:'城投公司',docs:[],branch:null},
-        {key:'p2-5',stage:'p2',no:'⑤',name:'C将商票2背书给B',desc:'C取得商票2后，以货款方式将商票2背书给B。',actor:'C',docs:[],branch:null},
-        {key:'p2-6',stage:'p2',no:'⑥',name:'B质押商票2并置换商票1',desc:'B将商票2作为新的质押物质押给担保公司，并置换老质押物商票1。',actor:'B',docs:[],branch:null},
-        {key:'p2-7',stage:'p2',no:'⑦',name:'担保公司解押老商票1',desc:'担保公司取得新的商票2质押后，完成对老商票1的解押。',actor:'担保公司',docs:[],branch:null},
-        {key:'p2-8',stage:'p2',no:'⑧',name:'城投兑付到期商票1给B',desc:'因商票1到期，城投公司向借款人B持有的商票1进行兑付。',actor:'城投公司',docs:[],branch:null},
-        {key:'p2-9',stage:'p2',no:'⑨',name:'B将兑付资金借款给咨询主体',desc:'借款人B将城投公司兑付的商票资金，以借款方式支付给咨询主体。',actor:'B',docs:[],branch:null},
-        {key:'p2-10',stage:'p2',no:'⑩',name:'咨询主体还款给资方',desc:'咨询公司取得资金后，将资金偿还给资方。',actor:'咨询主体',docs:[],branch:null},
-        {key:'p2-11',stage:'p2',no:'⑪',tag:'平账',name:'下游支付货款给C',desc:'下游公司向C支付货款。',actor:'下游公司',docs:[],branch:null},
-        {key:'p2-12',stage:'p2',no:'⑫',tag:'平账',name:'C还款给咨询主体',desc:'C将货款偿还给咨询主体。',actor:'C',docs:[],branch:null},
-        {key:'p2-13',stage:'p2',no:'⑬',tag:'平账',name:'咨询主体还款给B',desc:'咨询主体再将资金偿还给B（注意：本阶段还款对象为B，非A）。',actor:'咨询主体',docs:[],branch:null},
-        {key:'p2-14',stage:'p2',no:'⑭',tag:'平账',name:'B支付货款给A',desc:'B将资金作为货款支付给A。',actor:'B',docs:[],branch:null},
-        {key:'p2-15',stage:'p2',no:'⑮',tag:'平账',name:'A支付货款给上游',desc:'A再支付给上游公司，本阶段平账完成。',actor:'A',docs:[],branch:null},
-        {key:'p3-1',stage:'p3',no:'①',name:'资方拆借资金给咨询主体',desc:'资方提供资金，以拆借款方式支付给咨询主体。',actor:'资方',docs:[],branch:null},
-        {key:'p3-2',stage:'p3',no:'②',name:'咨询主体借款给B',desc:'咨询主体以借款方式，将资金支付给B（本阶段资金直达借款人B）。',actor:'咨询主体',docs:[],branch:null},
-        {key:'p3-3',stage:'p3',no:'③',name:'B偿还银行到期贷款本金',desc:'B向银行支付到期贷款本金。',actor:'B',docs:[],branch:null},
-        {key:'p3-4',stage:'p3',no:'④',name:'银行解除担保公司担保',desc:'贷款偿还完毕，银行解除担保公司的担保。',actor:'银行',docs:[],branch:null},
-        {key:'p3-5',stage:'p3',no:'⑤',name:'担保公司解押商票2',desc:'担保公司对B提供的反担保质押物商票2进行解押。',actor:'担保公司',docs:[],branch:null},
-        {key:'p3-6',stage:'p3',no:'⑥',name:'城投兑付到期商票2给B',desc:'因商票2到期，城投公司向借款人B持有的商票2进行兑付。',actor:'城投公司',docs:[],branch:null},
-        {key:'p3-7',stage:'p3',no:'⑦',name:'B将兑付资金借款给咨询主体',desc:'借款人B将城投公司兑付的商票资金，以借款方式支付给咨询主体。',actor:'B',docs:[],branch:null},
-        {key:'p3-8',stage:'p3',no:'⑧',name:'咨询主体还款给资方',desc:'咨询公司取得资金后，将资金偿还给资方，整个交易收尾。',actor:'咨询主体',docs:[],branch:null}
+        {key:'p1-1',stage:'p1',no:'①',from:'funder',to:'consult',name:'资方拆借资金给咨询主体',desc:'资方提供资金，以拆借款方式支付给咨询主体，启动整个交易框架。',actor:'资方',docs:[],branch:null},
+        {key:'p1-2',stage:'p1',no:'②',from:'consult',to:'C',name:'咨询主体借款给C',desc:'咨询主体以借款方式，将资金支付给C。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p1-3',stage:'p1',no:'③',from:'C',to:'chengtou',name:'C预付货款给城投',desc:'C与城投公司签署贸易合同，并以预付货款方式将资金支付给城投。',actor:'C',docs:[],branch:null},
+        {key:'p1-4',stage:'p1',no:'④',from:'chengtou',to:'C',name:'城投开具商票1给C',desc:'城投开具等额商票1作为贸易发货的担保提供给C；因实际不发货，C实际取得商票1。',actor:'城投公司',docs:[],branch:null},
+        {key:'p1-5',stage:'p1',no:'⑤',from:'C',to:'B',name:'C将商票1背书给B',desc:'C取得商票1后，以货款方式将商票1背书给B。',actor:'C',docs:[],branch:null},
+        {key:'p1-6',stage:'p1',no:'⑥',from:'B',to:'guar',name:'B将商票1质押给担保公司',desc:'B取得商票1后，将该商票1作为反担保措施质押给担保公司。',actor:'B',docs:[],branch:null},
+        {key:'p1-7',stage:'p1',no:'⑦',from:'guar',to:'bank',name:'担保公司向银行提供担保',desc:'担保公司为B公司向银行申请的贷款提供担保。',actor:'担保公司',docs:[],branch:null},
+        {key:'p1-8',stage:'p1',no:'⑧',from:'bank',to:'A',name:'银行受托支付放款给A',desc:'银行在与B公司签署借款合同、与担保公司签署担保合同后，以受托支付方式将贷款资金支付给A，作为B向A支付的货款。',actor:'银行',docs:['借款合同','担保合同','受托支付划款单据'],branch:null},
+        {key:'p1-9',stage:'p1',no:'⑨',from:'A',to:'consult',name:'A借款划付给咨询主体',desc:'A公司将取得的贷款资金，以借款方式划付给咨询主体。',actor:'A',docs:[],branch:null},
+        {key:'p1-10',stage:'p1',no:'⑩',from:'consult',to:'funder',name:'咨询主体还款给资方',desc:'咨询公司取得资金后，将资金偿还给资方，过桥资金闭环。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p1-11',stage:'p1',no:'⑪',tag:'平账',from:'down',to:'C',name:'下游支付货款给C',desc:'下游公司以现金、票据、贷款资金方式向C支付货款。',actor:'下游公司',docs:[],branch:null},
+        {key:'p1-12',stage:'p1',no:'⑫',tag:'平账',from:'C',to:'consult',name:'C还款给咨询主体',desc:'C将货款偿还给咨询主体。',actor:'C',docs:[],branch:null},
+        {key:'p1-13',stage:'p1',no:'⑬',tag:'平账',from:'consult',to:'A',name:'咨询主体还款给A',desc:'咨询主体再将资金偿还给A。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p1-14',stage:'p1',no:'⑭',tag:'平账',from:'A',to:'up',name:'A支付货款给上游',desc:'A最后将资金作为货款支付给上游公司，本阶段平账完成。',actor:'A',docs:[],branch:null},
+        {key:'p2-1',stage:'p2',no:'①',from:'funder',to:'consult',name:'资方拆借资金给咨询主体',desc:'资方提供资金，以拆借款方式支付给咨询主体。',actor:'资方',docs:[],branch:null},
+        {key:'p2-2',stage:'p2',no:'②',from:'consult',to:'C',name:'咨询主体借款给C',desc:'咨询主体以借款方式，将资金支付给C。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p2-3',stage:'p2',no:'③',from:'C',to:'chengtou',name:'C预付货款给城投',desc:'C以预付货款方式，将资金支付给城投。',actor:'C',docs:[],branch:null},
+        {key:'p2-4',stage:'p2',no:'④',from:'chengtou',to:'C',name:'城投开具商票2给C',desc:'城投开具等额商票2作为贸易发货的担保提供给C；因实际不发货，C实际取得商票2。',actor:'城投公司',docs:[],branch:null},
+        {key:'p2-5',stage:'p2',no:'⑤',from:'C',to:'B',name:'C将商票2背书给B',desc:'C取得商票2后，以货款方式将商票2背书给B。',actor:'C',docs:[],branch:null},
+        {key:'p2-6',stage:'p2',no:'⑥',from:'B',to:'guar',name:'B质押商票2并置换商票1',desc:'B将商票2作为新的质押物质押给担保公司，并置换老质押物商票1。',actor:'B',docs:[],branch:null},
+        {key:'p2-7',stage:'p2',no:'⑦',from:'guar',to:'B',name:'担保公司解押老商票1',desc:'担保公司取得新的商票2质押后，完成对老商票1的解押。',actor:'担保公司',docs:[],branch:null},
+        {key:'p2-8',stage:'p2',no:'⑧',from:'chengtou',to:'B',name:'城投兑付到期商票1给B',desc:'因商票1到期，城投公司向借款人B持有的商票1进行兑付。',actor:'城投公司',docs:[],branch:null},
+        {key:'p2-9',stage:'p2',no:'⑨',from:'B',to:'consult',name:'B将兑付资金借款给咨询主体',desc:'借款人B将城投公司兑付的商票资金，以借款方式支付给咨询主体。',actor:'B',docs:[],branch:null},
+        {key:'p2-10',stage:'p2',no:'⑩',from:'consult',to:'funder',name:'咨询主体还款给资方',desc:'咨询公司取得资金后，将资金偿还给资方。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p2-11',stage:'p2',no:'⑪',tag:'平账',from:'down',to:'C',name:'下游支付货款给C',desc:'下游公司向C支付货款。',actor:'下游公司',docs:[],branch:null},
+        {key:'p2-12',stage:'p2',no:'⑫',tag:'平账',from:'C',to:'consult',name:'C还款给咨询主体',desc:'C将货款偿还给咨询主体。',actor:'C',docs:[],branch:null},
+        {key:'p2-13',stage:'p2',no:'⑬',tag:'平账',from:'consult',to:'B',name:'咨询主体还款给B',desc:'咨询主体再将资金偿还给B（注意：本阶段还款对象为B，非A）。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p2-14',stage:'p2',no:'⑭',tag:'平账',from:'B',to:'A',name:'B支付货款给A',desc:'B将资金作为货款支付给A。',actor:'B',docs:[],branch:null},
+        {key:'p2-15',stage:'p2',no:'⑮',tag:'平账',from:'A',to:'up',name:'A支付货款给上游',desc:'A再支付给上游公司，本阶段平账完成。',actor:'A',docs:[],branch:null},
+        {key:'p3-1',stage:'p3',no:'①',from:'funder',to:'consult',name:'资方拆借资金给咨询主体',desc:'资方提供资金，以拆借款方式支付给咨询主体。',actor:'资方',docs:[],branch:null},
+        {key:'p3-2',stage:'p3',no:'②',from:'consult',to:'B',name:'咨询主体借款给B',desc:'咨询主体以借款方式，将资金支付给B（本阶段资金直达借款人B）。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p3-3',stage:'p3',no:'③',from:'B',to:'bank',name:'B偿还银行到期贷款本金',desc:'B向银行支付到期贷款本金。',actor:'B',docs:[],branch:null},
+        {key:'p3-4',stage:'p3',no:'④',from:'bank',to:'guar',name:'银行解除担保公司担保',desc:'贷款偿还完毕，银行解除担保公司的担保。',actor:'银行',docs:[],branch:null},
+        {key:'p3-5',stage:'p3',no:'⑤',from:'guar',to:'B',name:'担保公司解押商票2',desc:'担保公司对B提供的反担保质押物商票2进行解押。',actor:'担保公司',docs:[],branch:null},
+        {key:'p3-6',stage:'p3',no:'⑥',from:'chengtou',to:'B',name:'城投兑付到期商票2给B',desc:'因商票2到期，城投公司向借款人B持有的商票2进行兑付。',actor:'城投公司',docs:[],branch:null},
+        {key:'p3-7',stage:'p3',no:'⑦',from:'B',to:'consult',name:'B将兑付资金借款给咨询主体',desc:'借款人B将城投公司兑付的商票资金，以借款方式支付给咨询主体。',actor:'B',docs:[],branch:null},
+        {key:'p3-8',stage:'p3',no:'⑧',from:'consult',to:'funder',name:'咨询主体还款给资方',desc:'咨询公司取得资金后，将资金偿还给资方，整个交易收尾。',actor:'咨询主体',docs:[],branch:null}
       ]},
     'personal-cd-pledge':{title:'个人存单质押贷款',icon:'💳',linkedBizTypes:['存单质押贷款'],steps:[
       {key:'s1',name:'环节一（占位）',desc:'占位内容：待业务素材（手画流程图+文字说明）到位后，替换为正式环节说明。',actor:'',docs:[],branch:null},
@@ -1401,9 +1414,9 @@ document.getElementById(stage+'-save-status').style.display='none';
         if(s.stage&&s.stage!==lastStage){
           var st=(g.stages&&g.stages[s.stage])||{};
           html+='<div class="guide-stage-banner"><span class="guide-stage-title">'+escHtml(st.title||s.stage)+'</span>'
-              +(st.img?'<a class="guide-stage-img" href="'+escHtml(st.img)+'" target="_blank" rel="noopener">📷 手绘原图</a>':'')
               +(st.note?'<span class="guide-stage-note">'+escHtml(st.note)+'</span>':'')
               +'</div>';
+          html+=this._flowSvg(g,s.stage);
           lastStage=s.stage;lastTag=null;
         }
         if(s.tag&&s.tag!==lastTag){
@@ -1421,6 +1434,85 @@ document.getElementById(stage+'-save-status').style.display='none';
         if(i<g.steps.length-1)html+='<div class="guide-arrow">▼</div>';
       }
       document.getElementById('guide-flow').innerHTML=html;
+    },
+
+    jumpToStep(key){
+      var el=document.getElementById('guide-step-'+key);
+      if(!el)return;
+      el.scrollIntoView({behavior:'smooth',block:'center'});
+      el.classList.add('guide-step-flash');
+      setTimeout(function(){el.classList.remove('guide-step-flash')},1600);
+    },
+
+    _trimPt(p,half,dx,dy){
+      var m=Math.max(Math.abs(dx)/half[0],Math.abs(dy)/half[1]);
+      return [p[0]+dx/m,p[1]+dy/m];
+    },
+
+    _flowSvg(g,stageKey){
+      var L=g.layouts&&g.layouts[stageKey];
+      if(!L)return '';
+      var names=g.nodeNames||{};
+      var half={};
+      for(var nk in L.nodes){var nm=names[nk]||nk;half[nk]=[nm.length*7+14,17];}
+      var edges=[];
+      for(var i=0;i<g.steps.length;i++){
+        var s=g.steps[i];
+        if(s.stage===stageKey&&s.from&&s.to)edges.push({from:s.from,to:s.to,no:s.no,key:s.key,red:!!s.tag,ctx:false});
+      }
+      for(var c=0;L.context&&c<L.context.length;c++){
+        var ce=L.context[c];
+        edges.push({from:ce[0],to:ce[1],label:ce[2],ctx:true});
+      }
+      var groups={};
+      for(var e=0;e<edges.length;e++){
+        var gk=[edges[e].from,edges[e].to].slice().sort().join('|');
+        (groups[gk]=groups[gk]||[]).push(e);
+      }
+      var mB='ga'+stageKey+'b',mR='ga'+stageKey+'r',mG='ga'+stageKey+'g';
+      var out='<svg class="guide-flow-svg" viewBox="0 0 760 445">';
+      out+='<defs>'
+        +'<marker id="'+mB+'" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#2d3748"/></marker>'
+        +'<marker id="'+mR+'" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#c53030"/></marker>'
+        +'<marker id="'+mG+'" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#a0aec0"/></marker>'
+        +'</defs>';
+      var labels='';
+      for(var e2=0;e2<edges.length;e2++){
+        var ed=edges[e2];
+        var grp=groups[[ed.from,ed.to].slice().sort().join('|')];
+        var gi=grp.indexOf(e2);
+        var off=(gi-(grp.length-1)/2)*12;
+        var pa=L.nodes[ed.from],pb=L.nodes[ed.to];
+        if(!pa||!pb)continue;
+        var dx=pb[0]-pa[0],dy=pb[1]-pa[1];
+        var len=Math.sqrt(dx*dx+dy*dy)||1;
+        var px=-dy/len,py=dx/len;
+        var s1=this._trimPt(pa,half[ed.from],dx,dy);
+        var s2=this._trimPt(pb,half[ed.to],-dx,-dy);
+        var ox=px*off,oy=py*off;
+        var x1=s1[0]+ox,y1=s1[1]+oy,x2=s2[0]+ox,y2=s2[1]+oy;
+        var col=ed.ctx?'#a0aec0':(ed.red?'#c53030':'#2d3748');
+        var mk=ed.ctx?mG:(ed.red?mR:mB);
+        out+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+col+'" stroke-width="'+(ed.ctx?1.2:1.8)+'"'
+          +(ed.ctx?' stroke-dasharray="5 4"':'')+' marker-end="url(#'+mk+')"/>';
+        var mx=((x1+x2)/2+px*12).toFixed(1),my=((y1+y2)/2+py*12).toFixed(1);
+        if(ed.ctx){
+          labels+='<text x="'+mx+'" y="'+my+'" class="gfs-ctx">'+escHtml(ed.label)+'</text>';
+        }else{
+          labels+='<g class="gfs-edge" onclick="Guide.jumpToStep(\''+ed.key+'\')">'
+            +'<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="transparent" stroke-width="16"/>'
+            +'<circle cx="'+mx+'" cy="'+my+'" r="10" fill="#fff" stroke="'+col+'" stroke-width="1.5"/>'
+            +'<text x="'+mx+'" y="'+(Number(my)+4)+'" text-anchor="middle" class="gfs-no" fill="'+col+'">'+escHtml(ed.no)+'</text></g>';
+        }
+      }
+      for(var nk2 in L.nodes){
+        var pos=L.nodes[nk2],hw=half[nk2][0],hh=half[nk2][1];
+        out+='<g><rect x="'+(pos[0]-hw)+'" y="'+(pos[1]-hh)+'" width="'+(hw*2)+'" height="'+(hh*2)+'" rx="7" fill="#fff" stroke="#319795" stroke-width="1.6"/>'
+          +'<text x="'+pos[0]+'" y="'+(pos[1]+5)+'" text-anchor="middle" class="gfs-node">'+escHtml(names[nk2]||nk2)+'</text></g>';
+      }
+      out+=labels+'</svg>'
+        +'<div class="guide-flow-legend">黑箭头＝正常流转 · <span style="color:#c53030">红箭头＝平账环节</span> · 灰虚线＝主贸易货物流向 · 点带圈数字跳转到对应环节</div>';
+      return out;
     },
 
     _renderNotesHtml(stepKey){
