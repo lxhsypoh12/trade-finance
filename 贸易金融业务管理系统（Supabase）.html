@@ -391,8 +391,6 @@
 .guide-stage-banner{max-width:760px;margin:22px auto 12px;padding:10px 16px;background:linear-gradient(90deg,#319795,#4fd1c5);border-radius:8px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .guide-stage-title{font-size:15px;font-weight:700}
 .guide-stage-note{font-size:12px;opacity:0.95;flex-basis:100%}
-.guide-stage-img{font-size:12px;color:#fff;text-decoration:none;background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:6px;white-space:nowrap}
-.guide-stage-img:hover{background:rgba(255,255,255,0.35)}
 .guide-divider{max-width:760px;margin:14px auto;text-align:center;font-size:13px;color:#c53030;font-weight:700}
 .guide-divider small{display:block;font-weight:400;font-size:11px;color:#9b2c2c;margin-top:2px}
 .guide-step-tag{font-size:11px;background:#fed7d7;color:#9b2c2c;border-radius:4px;padding:2px 8px;font-weight:700;flex-shrink:0}
@@ -1279,11 +1277,45 @@ document.getElementById(stage+'-save-status').style.display='none';
 
   // ===== 业务模式指南（流程结构固定，注意事项存 guide_notes 表） =====
   var GUIDE_DATA={
-    'entrusted-pay':{title:'受托支付',icon:'🔀',linkedBizTypes:['跑量/受托支付'],steps:[
-      {key:'s1',name:'环节一（占位）',desc:'占位内容：待业务素材（手画流程图+文字说明）到位后，替换为正式环节说明。',actor:'',docs:[],branch:null},
-      {key:'s2',name:'环节二（占位）',desc:'占位内容：待业务素材到位后替换。',actor:'',docs:[],branch:null},
-      {key:'s3',name:'环节三（占位）',desc:'占位内容：待业务素材到位后替换。',actor:'',docs:[],branch:null}
-    ]},
+    'entrusted-pay':{title:'受托支付',icon:'🔀',linkedBizTypes:['跑量/受托支付'],
+      legend:{
+        parties:[
+          ['A','我司贸易公司A：主要用于接收贷款资金'],
+          ['B','城投公司：银行贷款借款人'],
+          ['C','我司贸易公司C：主要用于帮助B城投公司实现回款'],
+          ['上','主贸易环节（A→B→C）的上游公司'],
+          ['下','主贸易环节（A→B→C）的下游公司，以现金、贷款资金支付货款'],
+          ['银行','贷款环节贷款人，向借款人B发放贷款'],
+          ['资方','提供拆借资金，完成资金过账'],
+          ['咨询主体','我司咨询公司，在整个交易框架中用于完成拆借资金的平账']
+        ],
+        chains:[
+          '主贸易环节（货物流转）：上游公司 → A → B → C → 下游公司'
+        ],
+        essence:'本业务实质：由B（城投公司）作为借款人取得一笔新增银行贷款，贷款资金以受托支付方式支付给A作为B向A的货款；A与咨询主体、C与咨询主体之间的未平账借款，后期通过与上、下游公司的真实贸易环节完成平账。'
+      },
+      stages:{
+        p1:{title:'阶段一 · 放款',note:'触发：银行完成对B公司的贷款授信'},
+        p2:{title:'阶段二 · 平账',note:'触发：下游公司通过真实贸易环节支付货款'}
+      },
+      nodeNames:{up:'上游',down:'下游',A:'A',B:'B',C:'C',bank:'银行',consult:'咨询主体',funder:'资方'},
+      layouts:{
+        p1:{nodes:{bank:[400,40],up:[40,200],A:[200,200],B:[400,200],C:[580,200],down:[720,200],consult:[300,330],funder:[300,430]},context:[['up','A','货'],['A','B','货'],['B','C','货'],['C','down','货']]},
+        p2:{nodes:{up:[40,200],A:[200,200],B:[400,200],C:[580,200],down:[720,200],consult:[300,330]},context:[['up','A','货'],['A','B','货'],['B','C','货'],['C','down','货']]}
+      },
+      groupNote:'平账环节：贷款发放后A与咨询主体、C与咨询主体之间仍存在一笔借款未平账，需后期通过与上、下游公司的真实贸易环节完成',
+      steps:[
+        {key:'p1-1',stage:'p1',no:'①',from:'funder',to:'consult',name:'资方拆借资金给咨询主体',desc:'资方提供资金，以拆借款方式支付给咨询主体。',actor:'资方',docs:[],branch:null},
+        {key:'p1-2',stage:'p1',no:'②',from:'consult',to:'C',name:'咨询主体借款给C',desc:'咨询主体以借款方式，将资金支付给C。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p1-3',stage:'p1',no:'③',from:'C',to:'B',name:'C支付货款给B',desc:'C取得资金后，以货款方式支付给B。',actor:'C',docs:[],branch:null},
+        {key:'p1-4',stage:'p1',no:'④',from:'bank',to:'A',name:'银行受托支付放款给A',desc:'B取得资金后向银行提出受托支付划款申请；银行以受托支付方式将贷款资金直接划付给A，作为B向A支付的货款。',actor:'银行',docs:[],branch:null},
+        {key:'p1-5',stage:'p1',no:'⑤',from:'A',to:'consult',name:'A借款划付给咨询主体',desc:'A公司将取得的贷款资金，以借款方式划付给咨询主体。',actor:'A',docs:[],branch:null},
+        {key:'p1-6',stage:'p1',no:'⑥',from:'consult',to:'funder',name:'咨询主体还款给资方',desc:'咨询公司取得资金后，将资金偿还给资方，过桥资金闭环。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p2-1',stage:'p2',no:'⑦',tag:'平账',from:'down',to:'C',name:'下游支付货款给C',desc:'下游公司以现金、贷款资金方式向C支付货款。',actor:'下游公司',docs:[],branch:null},
+        {key:'p2-2',stage:'p2',no:'⑧',tag:'平账',from:'C',to:'consult',name:'C还款给咨询主体',desc:'C将货款偿还给咨询主体。',actor:'C',docs:[],branch:null},
+        {key:'p2-3',stage:'p2',no:'⑨',tag:'平账',from:'consult',to:'A',name:'咨询主体还款给A',desc:'咨询主体再将资金偿还给A。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p2-4',stage:'p2',no:'⑩',tag:'平账',from:'A',to:'up',name:'A支付货款给上游',desc:'A最后将资金作为货款支付给上游公司，本业务平账完成。',actor:'A',docs:[],branch:null}
+      ]},
     'city-cp-pledge':{title:'城投商票质押贷款',icon:'🏦',linkedBizTypes:['商票质押贷款'],
       legend:{
         parties:[
@@ -1354,11 +1386,51 @@ document.getElementById(stage+'-save-status').style.display='none';
         {key:'p3-7',stage:'p3',no:'⑦',from:'B',to:'consult',name:'B将兑付资金借款给咨询主体',desc:'借款人B将城投公司兑付的商票资金，以借款方式支付给咨询主体。',actor:'B',docs:[],branch:null},
         {key:'p3-8',stage:'p3',no:'⑧',from:'consult',to:'funder',name:'咨询主体还款给资方',desc:'咨询公司取得资金后，将资金偿还给资方，整个交易收尾。',actor:'咨询主体',docs:[],branch:null}
       ]},
-    'personal-cd-pledge':{title:'个人存单质押贷款',icon:'💳',linkedBizTypes:['存单质押贷款'],steps:[
-      {key:'s1',name:'环节一（占位）',desc:'占位内容：待业务素材（手画流程图+文字说明）到位后，替换为正式环节说明。',actor:'',docs:[],branch:null},
-      {key:'s2',name:'环节二（占位）',desc:'占位内容：待业务素材到位后替换。',actor:'',docs:[],branch:null},
-      {key:'s3',name:'环节三（占位）',desc:'占位内容：待业务素材到位后替换。',actor:'',docs:[],branch:null}
-    ]}
+    'personal-cd-pledge':{title:'个人存单质押贷款',icon:'💳',linkedBizTypes:['存单质押贷款'],
+      legend:{
+        parties:[
+          ['A','我司贸易公司A：主要用于接收贷款资金'],
+          ['B','我司贸易公司B：银行贷款借款人'],
+          ['C','个人：用于法人资金倒账'],
+          ['上','主贸易环节（A→B）的上游公司'],
+          ['下','主贸易环节（A→B）的下游公司，以现金、票据、贷款资金支付货款'],
+          ['银行','贷款环节贷款人，向借款人B发放贷款'],
+          ['法人','贷款环节的担保人、质押人，为借款人B偿还借款提供个人担保及存单质押'],
+          ['资方','提供拆借资金，完成资金过账'],
+          ['咨询主体','我司咨询公司，在整个交易框架中用于完成拆借资金的平账']
+        ],
+        chains:[
+          '主贸易环节（货物流转）：上游公司 → A → B → 下游公司'
+        ],
+        essence:'本业务实质：由B作为借款人、法人提供连带责任担保及个人存单质押，取得一笔新增银行贷款；法人存单资金先经C倒账完成来源核验，贷款资金以受托支付方式支付给A，未平账借款后期通过真实贸易环节完成平账。'
+      },
+      stages:{
+        p1:{title:'阶段一 · 倒账与质押',note:'触发：银行完成对B公司的贷款授信，法人存单资金需先完成倒账与来源核验'},
+        p2:{title:'阶段二 · 放款',note:'触发：法人存单开立并质押给贷款银行办妥'},
+        p3:{title:'阶段三 · 平账',note:'触发：下游公司通过真实贸易环节支付货款'}
+      },
+      nodeNames:{up:'上游',down:'下游',A:'A',B:'B',C:'C',bank:'银行',legal:'法人',consult:'咨询主体',funder:'资方'},
+      layouts:{
+        p1:{nodes:{bank:[200,40],legal:[430,40],C:[620,40],up:[40,200],A:[200,200],B:[430,200],down:[700,200],consult:[430,330],funder:[430,430]},context:[['up','A','货'],['A','B','货'],['B','down','货']]},
+        p2:{nodes:{bank:[200,40],up:[40,200],A:[200,200],B:[430,200],down:[700,200],consult:[430,330],funder:[430,430]},context:[['up','A','货'],['A','B','货'],['B','down','货']]},
+        p3:{nodes:{up:[40,200],A:[200,200],B:[430,200],down:[700,200],consult:[430,330]},context:[['up','A','货'],['A','B','货'],['B','down','货']]}
+      },
+      groupNote:'平账环节：贷款发放后A与咨询主体、B与咨询主体之间仍存在一笔借款未平账，需后期通过与上、下游公司的真实贸易环节完成',
+      steps:[
+        {key:'p1-1',stage:'p1',no:'①',from:'funder',to:'consult',name:'资方拆借资金给咨询主体',desc:'资方提供资金，以拆借款方式支付给咨询主体。',actor:'资方',docs:[],branch:null},
+        {key:'p1-2',stage:'p1',no:'②',from:'consult',to:'B',name:'咨询主体借款给B',desc:'咨询主体以借款方式，将资金支付给B。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p1-3',stage:'p1',no:'③',from:'B',to:'legal',name:'B以股东借款支付给法人非贷款行账户',desc:'B以股东借款方式，将资金支付给法人非贷款银行账户，供法人准备存单资金。',actor:'B',docs:[],branch:null},
+        {key:'p1-4',stage:'p1',no:'④',from:'legal',to:'C',name:'法人倒账借款给个人C',desc:'银行需核验法人存单资金来源：法人非贷款行账号取得借款资金后，先以借款方式划转至个人C倒账。',actor:'法人',docs:[],branch:null},
+        {key:'p1-5',stage:'p1',no:'⑤',from:'C',to:'legal',name:'C当天还款至法人贷款行账户',desc:'C取得资金后，当天将资金以还款方式划付给法人贷款银行账户，完成资金倒账。',actor:'C',docs:[],branch:null},
+        {key:'p1-6',stage:'p1',no:'⑥',from:'legal',to:'bank',name:'法人转存单并质押给银行',desc:'法人取得倒账资金后转为定期存单，并将存单作为B的质押物质押给贷款银行。',actor:'法人',docs:[],branch:null},
+        {key:'p2-1',stage:'p2',no:'⑦',from:'bank',to:'A',name:'银行受托支付放款给A',desc:'银行在与B公司签署借款合同、与法人签署担保合同及存单质押合同后，以受托支付方式将贷款资金支付给A，作为B向A支付的货款。',actor:'银行',docs:['借款合同','担保合同','存单质押合同'],branch:null},
+        {key:'p2-2',stage:'p2',no:'⑧',from:'A',to:'consult',name:'A借款划付给咨询主体',desc:'A公司将取得的贷款资金，以借款方式划付给咨询主体。',actor:'A',docs:[],branch:null},
+        {key:'p2-3',stage:'p2',no:'⑨',from:'consult',to:'funder',name:'咨询主体还款给资方',desc:'咨询公司取得资金后，将资金偿还给资方，过桥资金闭环。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p3-1',stage:'p3',no:'⑩',tag:'平账',from:'down',to:'B',name:'下游支付货款给B',desc:'下游公司以现金、票据、贷款资金方式向B支付货款。',actor:'下游公司',docs:[],branch:null},
+        {key:'p3-2',stage:'p3',no:'⑪',tag:'平账',from:'B',to:'consult',name:'B还款给咨询主体',desc:'B将货款偿还给咨询主体。',actor:'B',docs:[],branch:null},
+        {key:'p3-3',stage:'p3',no:'⑫',tag:'平账',from:'consult',to:'A',name:'咨询主体还款给A',desc:'咨询主体再将资金偿还给A。',actor:'咨询主体',docs:[],branch:null},
+        {key:'p3-4',stage:'p3',no:'⑬',tag:'平账',from:'A',to:'up',name:'A支付货款给上游',desc:'A最后将资金作为货款支付给上游公司，本业务平账完成。',actor:'A',docs:[],branch:null}
+      ]}
   };
 
   var Guide={
