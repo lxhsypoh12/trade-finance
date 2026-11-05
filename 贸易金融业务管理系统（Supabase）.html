@@ -383,7 +383,9 @@
 .guide-note-add{border:1px dashed #d69e2e;background:transparent;color:#975a16;font-size:12px;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:inherit}
 .guide-note-add:hover{background:#fefcbf}
 .guide-legend{background:#ebf8ff;border:1px solid #bee3f8;border-radius:10px;padding:14px 18px;max-width:760px;margin:0 auto 18px}
-.guide-legend-title{font-size:14px;font-weight:700;color:#2c5282;margin-bottom:8px}
+.guide-legend-title{font-size:14px;font-weight:700;color:#2c5282;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.guide-legend-archive-btn{font-size:12px;font-weight:400;padding:4px 10px;border:1px solid #90cdf4;background:#fff;color:#2c5282;border-radius:6px;cursor:pointer;white-space:nowrap}
+.guide-legend-archive-btn:hover{background:#bee3f8}
 .guide-legend-item{font-size:12px;color:#2d3748;line-height:1.9}
 .guide-legend-item b{color:#2c5282}
 .guide-legend-chains{margin-top:8px;padding-top:8px;border-top:1px dashed #bee3f8;font-size:12px;color:#2c5282;line-height:1.9}
@@ -590,6 +592,17 @@
     </div>
   </div>
 </div>
+<div class="modal-overlay" id="modal-archive">
+  <div class="modal-box" style="width:520px">
+    <div class="modal-header">
+      <h3 id="modal-archive-title">📁 归档资料清单</h3>
+      <button class="modal-close" onclick="Guide.closeArchive()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-archive-body">
+      <div style="text-align:center;color:#a0aec0;padding:20px">加载中...</div>
+    </div>
+  </div>
+</div>
 
 <script>
 (function() {
@@ -678,6 +691,7 @@
 
   // ===== Supabase Stats CRUD =====
   var SB_API='https://jpcjwhyotcrhxstzwzid.supabase.co/rest/v1/trade_stats';
+  var SB_ARCHIVE='https://jpcjwhyotcrhxstzwzid.supabase.co/rest/v1/guide_archive_lists';
   var SB_KEY='sb_publishable_hE4GbUYp-NYiD1SYBvw0wg_yUNtV6Bg';
   function sbGet(stage){return fetch(SB_API+'?stage=eq.'+encodeURIComponent(stage)+'&order=created_at.desc',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}}).then(function(r){return r.json()})}
   function sbInsert(records){return fetch(SB_API,{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(records)}).then(function(r){return r.json()})}
@@ -1468,7 +1482,7 @@ document.getElementById(stage+'-save-status').style.display='none';
       document.getElementById('guide-detail-title').innerHTML=g.icon+' '+escHtml(g.title);
       var html='';
       if(g.legend){
-        html+='<div class="guide-legend"><div class="guide-legend-title">📖 参与方与贸易链说明</div>';
+        html+='<div class="guide-legend"><div class="guide-legend-title"><span>📖 参与方与贸易链说明</span><button class="guide-legend-archive-btn" onclick="Guide.showArchive()">📁 归档资料清单</button></div>';
         for(var li=0;li<g.legend.parties.length;li++){
           var lp=g.legend.parties[li];
           html+='<div class="guide-legend-item"><b>'+escHtml(lp[0])+'</b> ＝ '+escHtml(lp[1])+'</div>';
@@ -1691,6 +1705,45 @@ document.getElementById(stage+'-save-status').style.display='none';
       }
       body.innerHTML=h;
     },
+
+    async showArchive(){
+      var g=GUIDE_DATA[this._current];if(!g||!g.legend)return;
+      this._archiveRow=null;this._archiveEditing=false;
+      document.getElementById('modal-archive-title').textContent='📁 归档资料清单 · '+g.title;
+      document.getElementById('modal-archive').classList.add('active');
+      document.getElementById('modal-archive-body').innerHTML='<div style="text-align:center;color:#a0aec0;padding:20px">加载中...</div>';
+      try{var rows=await fetch(SB_ARCHIVE+'?guide_key=eq.'+encodeURIComponent(this._current),{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}}).then(function(r){return r.json()});this._archiveRow=(rows&&rows[0])?rows[0]:null}catch(e){this._archiveRow=null}
+      this.renderArchive();
+    },
+    renderArchive(){
+      var body=document.getElementById('modal-archive-body');if(!body)return;
+      if(this._archiveEditing){
+        var val=this._archiveRow?this._archiveRow.content:'';
+        body.innerHTML='<textarea id="archive-edit-ta" rows="10" autocomplete="off" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;line-height:1.8;outline:none;box-sizing:border-box" placeholder="每行一条归档资料，例如：&#10;借款合同&#10;担保合同">'+escHtml(val)+'</textarea><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px"><button onclick="Guide.cancelArchive()" style="padding:7px 16px;border:1px solid #cbd5e0;background:#fff;border-radius:6px;font-size:13px;cursor:pointer">取消</button><button onclick="Guide.saveArchive()" style="padding:7px 16px;border:none;background:#3182ce;color:#fff;border-radius:6px;font-size:13px;cursor:pointer">💾 保存</button></div>';
+        return;
+      }
+      var items=(this._archiveRow&&this._archiveRow.content)?this._archiveRow.content.split('\n').filter(function(t){return t.trim()}):[];
+      var h='';
+      if(!items.length){h='<div class="modal-errorlog-empty">暂无清单。点「✏️ 编辑」添加该业务需归档备案的资料，一行一条。</div>'}
+      else{h='<div style="font-size:13px;color:#2d3748;line-height:2">'+items.map(function(t,i){return '<div>'+(i+1)+'. '+escHtml(t)+'</div>'}).join('')+'</div>'}
+      h+='<div style="display:flex;justify-content:flex-end;margin-top:12px"><button onclick="Guide.editArchive()" style="padding:7px 16px;border:1px solid #90cdf4;background:#ebf8ff;color:#2c5282;border-radius:6px;font-size:13px;cursor:pointer">✏️ 编辑</button></div>';
+      body.innerHTML=h;
+    },
+    editArchive(){this._archiveEditing=true;this.renderArchive()},
+    cancelArchive(){this._archiveEditing=false;this.renderArchive()},
+    async saveArchive(){
+      var ta=document.getElementById('archive-edit-ta');if(!ta)return;
+      var content=ta.value,now=new Date().toISOString();
+      if(this._archiveRow){
+        await fetch(SB_ARCHIVE+'?id=eq.'+this._archiveRow.id,{method:'PATCH',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({content:content,updated_at:now})});
+        this._archiveRow.content=content;this._archiveRow.updated_at=now;
+      }else{
+        if(!content.trim()){alert('请先填写清单内容再保存');return}
+        try{var res=await fetch(SB_ARCHIVE,{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify([{guide_key:this._current,content:content,updated_at:now}])}).then(function(r){return r.json()});this._archiveRow=(res&&res[0])?res[0]:{id:0,guide_key:this._current,content:content}}catch(e){alert('保存失败：'+e.message);return}
+      }
+      this._archiveEditing=false;this.renderArchive();
+    },
+    closeArchive(){document.getElementById('modal-archive').classList.remove('active')},
 
     closeErrorLogs(){
       document.getElementById('modal-errorlog').className='modal-overlay';
