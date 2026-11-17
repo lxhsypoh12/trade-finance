@@ -706,6 +706,8 @@
   function effProfit(r){var d=parseDetail(r);if(d){var s=0,k,inc=d.income||{},exp=d.expense||{};for(k in inc)s+=parseFloat(inc[k])||0;for(k in exp)s-=parseFloat(exp[k])||0;return s}return(parseFloat(r.actual_revenue||0)-parseFloat(r.actual_cost||0))}
   function doneTimeVal(r){var m=String((r&&r.time)||'').match(/(\d{4})\D*(\d{1,2})?\D*(\d{1,2})?/);if(!m)return 0;return parseInt(m[1],10)*10000+(parseInt(m[2],10)||0)*100+(parseInt(m[3],10)||0)}
   function escHtml(s){if(s===null||s===undefined)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+  // Excel 导出文本单元格防公式注入（CWE-1236）：以 = + - @ TAB CR 开头时加 ' 前缀失活；数字列勿用（会破坏求和）
+  function xlsText(v){if(v===null||v===undefined)v='';v=String(v);return(/[=+\-@\t\r]/.test(v.charAt(0))?"'":'')+escHtml(v)}
 
   var Stats={_cache:{bid:[],win:[],done:[]},_segFilter:'',
     setSegmentFilter(v){this._segFilter=v||'';this.render('done')},
@@ -822,18 +824,18 @@ document.getElementById(stage+'-save-status').style.display='none';
         var r=data[i];
         html+='<tr><td>'+(i+1)+'</td>';
         if(stage==='bid'){
-          html+='<td>'+escHtml(r.region||'')+'</td><td>'+escHtml(r.company||'')+'</td><td>'+escHtml(r.bank||'')+'</td>';
-          html+='<td>'+(r.amount||'')+'</td><td>'+escHtml(r.biz_type||'')+'</td><td>'+escHtml(r.time||'')+'</td><td>'+escHtml(r.person||'')+'</td>';
+          html+='<td>'+xlsText(r.region)+'</td><td>'+xlsText(r.company)+'</td><td>'+xlsText(r.bank)+'</td>';
+          html+='<td>'+(r.amount||'')+'</td><td>'+xlsText(r.biz_type)+'</td><td>'+xlsText(r.time)+'</td><td>'+xlsText(r.person)+'</td>';
         }else if(stage==='win'){
           var ep=parseFloat(r.win_amount||0)*parseFloat(r.win_rate||0)/100;
-          html+='<td>'+escHtml(r.region||'')+'</td><td>'+escHtml(r.company||'')+'</td><td>'+escHtml(r.bank||'')+'</td>';
-          html+='<td>'+(r.amount||'')+'</td><td>'+escHtml(r.biz_type||'')+'</td><td>'+escHtml(r.time||'')+'</td><td>'+escHtml(r.person||'')+'</td>';
-          html+='<td>'+escHtml(r.trader||'')+'</td><td>'+(r.trade_cost||'')+'</td><td>'+(r.win_rate||'')+'</td><td>'+(r.win_amount||'')+'</td><td>'+ep.toFixed(2)+'</td>';
+          html+='<td>'+xlsText(r.region)+'</td><td>'+xlsText(r.company)+'</td><td>'+xlsText(r.bank)+'</td>';
+          html+='<td>'+(r.amount||'')+'</td><td>'+xlsText(r.biz_type)+'</td><td>'+xlsText(r.time)+'</td><td>'+xlsText(r.person)+'</td>';
+          html+='<td>'+xlsText(r.trader)+'</td><td>'+(r.trade_cost||'')+'</td><td>'+(r.win_rate||'')+'</td><td>'+(r.win_amount||'')+'</td><td>'+ep.toFixed(2)+'</td>';
         }else if(stage==='done'){
-          html+='<td>'+escHtml(r.region||'')+'</td><td>'+escHtml(r.company||'')+'</td><td>'+escHtml(r.bank||'')+'</td>';
-          html+='<td>'+(r.amount||'')+'</td><td>'+escHtml(r.biz_type||'')+'</td><td>'+escHtml(r.time||'')+'</td><td>'+escHtml(r.person||'')+'</td>';
-          html+='<td>'+escHtml(r.business_segment||'')+'</td><td>'+escHtml(r.trader||'')+'</td><td>'+effProfit(r).toFixed(2)+'</td>';
-          html+='<td>'+escHtml(r.archive_status||'未归档')+'</td><td>'+escHtml(r.archive_date||'')+'</td>';
+          html+='<td>'+xlsText(r.region)+'</td><td>'+xlsText(r.company)+'</td><td>'+xlsText(r.bank)+'</td>';
+          html+='<td>'+(r.amount||'')+'</td><td>'+xlsText(r.biz_type)+'</td><td>'+xlsText(r.time)+'</td><td>'+xlsText(r.person)+'</td>';
+          html+='<td>'+xlsText(r.business_segment||'')+'</td><td>'+xlsText(r.trader)+'</td><td>'+effProfit(r).toFixed(2)+'</td>';
+          html+='<td>'+xlsText(r.archive_status||'未归档')+'</td><td>'+xlsText(r.archive_date)+'</td>';
         }
         html+='</tr>';
       }
@@ -1891,7 +1893,7 @@ document.getElementById(stage+'-save-status').style.display='none';
         var r=data[i];
         var remaining=(parseFloat(r.invoice_issued_6m)||0)-(parseFloat(r.invoice_used_6m)||0);
         html+='<tr><td>'+(i+1)+'</td>';
-        html+='<td>'+escHtml(r.company_name||'')+'</td><td>'+escHtml(r.established_date||'')+'</td><td>'+escHtml(r.registered_capital||'')+'</td><td>'+escHtml(r.paid_capital||'')+'</td><td>'+escHtml(r.region||'')+'</td><td>'+escHtml(r.social_insurance_count||'')+'</td><td>'+escHtml(r.long_term_invoice_quota||'')+'</td><td>'+escHtml(r.invoice_issued_6m||'')+'</td><td>'+escHtml(r.invoice_used_6m||'')+'</td><td>'+remaining.toFixed(2)+'</td>';
+        html+='<td>'+xlsText(r.company_name)+'</td><td>'+xlsText(r.established_date)+'</td><td>'+escHtml(r.registered_capital||'')+'</td><td>'+escHtml(r.paid_capital||'')+'</td><td>'+xlsText(r.region)+'</td><td>'+escHtml(r.social_insurance_count||'')+'</td><td>'+escHtml(r.long_term_invoice_quota||'')+'</td><td>'+escHtml(r.invoice_issued_6m||'')+'</td><td>'+escHtml(r.invoice_used_6m||'')+'</td><td>'+remaining.toFixed(2)+'</td>';
         html+='</tr>';
       }
       html+='</tbody></table></body></html>';
