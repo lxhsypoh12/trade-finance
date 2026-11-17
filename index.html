@@ -472,7 +472,7 @@
       <button class="btn-action btn-add" onclick="SubsidiaryStats.addRecord()">＋ 添加记录</button>
     </div>
     <div class="stats-table-wrapper"><table class="stats-table" id="subsidiary-table"><thead><tr><th style="width:90px">操作</th><th>公司名称</th><th>成立时间</th><th>注册资本<br>(万元)</th><th>实缴资本<br>(万元)</th><th>地址<br>(市/区)</th><th>社保人数</th><th>长期发票额度<br>(万元)</th><th>前6月已开发票量<br>(万元)</th><th>前6月使用发票量<br>(万元)</th><th>前6月剩余已开发票量<br>(万元)</th></tr></thead><tbody id="subsidiary-tbody"></tbody></table></div>
-    <div class="stats-actions"><button class="btn-action btn-primary" onclick="SubsidiaryStats.exportPDF()">📥 导出PDF</button></div>
+    <div class="stats-actions"><button class="btn-action btn-primary" onclick="SubsidiaryStats.exportPDF()">📥 导出PDF</button><button class="btn-excel" onclick="SubsidiaryStats.exportExcel()">📊 导出Excel</button></div>
   </div>
 </div>
 
@@ -1876,6 +1876,34 @@ document.getElementById(stage+'-save-status').style.display='none';
         el.style.display='none';
         document.title='贸易金融业务管理系统（Supabase）';
       },500);
+    },
+
+    exportExcel(){
+      var cols=['公司名称','成立时间','注册资本(万元)','实缴资本(万元)','地址(市/区)','社保人数','长期发票额度(万元)','前6月已开发票量(万元)','前6月使用发票量(万元)','前6月剩余已开发票量(万元)'];
+      var data=this._cache||[];
+      var t=new Date(),ds=t.getFullYear()+String(t.getMonth()+1).padStart(2,'0')+String(t.getDate()).padStart(2,'0');
+      var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+      html+='<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>贸易子公司统计</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
+      html+='<table border="1"><thead><tr><th style="background:#1e3a5f;color:#fff;font-weight:bold">序号</th>';
+      for(var i=0;i<cols.length;i++)html+='<th style="background:#1e3a5f;color:#fff;font-weight:bold">'+cols[i]+'</th>';
+      html+='</tr></thead><tbody>';
+      for(var i=0;i<data.length;i++){
+        var r=data[i];
+        var remaining=(parseFloat(r.invoice_issued_6m)||0)-(parseFloat(r.invoice_used_6m)||0);
+        html+='<tr><td>'+(i+1)+'</td>';
+        html+='<td>'+escHtml(r.company_name||'')+'</td><td>'+escHtml(r.established_date||'')+'</td><td>'+escHtml(r.registered_capital||'')+'</td><td>'+escHtml(r.paid_capital||'')+'</td><td>'+escHtml(r.region||'')+'</td><td>'+escHtml(r.social_insurance_count||'')+'</td><td>'+escHtml(r.long_term_invoice_quota||'')+'</td><td>'+escHtml(r.invoice_issued_6m||'')+'</td><td>'+escHtml(r.invoice_used_6m||'')+'</td><td>'+remaining.toFixed(2)+'</td>';
+        html+='</tr>';
+      }
+      html+='</tbody></table></body></html>';
+      var blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');
+      a.href=url;
+      a.download='贸易子公司统计_'+ds+'.xls';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
   };
 
