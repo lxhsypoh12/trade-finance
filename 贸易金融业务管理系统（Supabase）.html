@@ -89,6 +89,7 @@
   .home-card.card-stats-done { border-top-color: #38a169; }
   .home-card.card-stats-loan { border-top-color: #d69e2e; }
   .home-card.card-stats-subsidiary { border-top-color: #2b6cb0; }
+  .home-card.card-stats-finance { border-top-color: #6b46c1; }
   .home-card.card-errorlog { border-top-color: #c53030; }
   .home-card.card-guide { border-top-color: #319795; }
   .home-card .icon { font-size: 48px; margin-bottom: 16px; }
@@ -258,6 +259,7 @@
       <div class="home-card card-stats-done" onclick="showView('stats-done')"><div class="icon">✅</div><h2>完成阶段</h2><p>实付成本 / 实收金额 / 实际利润</p></div>
       <div class="home-card card-stats-loan" onclick="showView('stats-loan')"><div class="icon">💰</div><h2>贸易子公司贷款类业务统计</h2><p>贷款到期跟踪 / 颜色预警 / 飞书提醒</p></div>
       <div class="home-card card-stats-subsidiary" onclick="showView('stats-subsidiary')"><div class="icon">🏢</div><h2>贸易子公司统计</h2><p>公司信息 / 注册资本 / 社保 / 发票额度</p></div>
+      <div class="home-card card-stats-finance" onclick="FinanceStats.cardClick()"><div class="icon">💹</div><h2>财务看板</h2><p>自营板块利润 · 成本汇总统计</p></div>
       <div class="home-card card-errorlog" onclick="showView('errorlog')"><div class="icon">⚠️</div><h2>错误总结日志</h2><p>历史错误记录 / 后果 / 解决方案</p></div>
       <div class="home-card card-guide" onclick="showView('guide')"><div class="icon">📖</div><h2>业务模式指南</h2><p>业务全流程图 / 环节注意事项</p></div>
     </div>
@@ -476,6 +478,30 @@
   </div>
 </div>
 
+<!-- ====== 视图：财务看板 ====== -->
+<div id="view-stats-finance" style="display:none">
+  <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>💹 财务看板</h1><p>Supabase 云端 · 自营板块利润 · 成本汇总统计</p></div></div>
+  <div class="stats-container">
+    <div class="stats-toolbar">
+      <div class="toolbar-left">
+        <span id="fin-year-btns" style="margin-right:8px"></span>
+        <button class="btn-action btn-add" id="fin-addmonth-btn" onclick="FinanceStats.showAddMonth()">＋加月份列</button>
+        <span style="color:#718096;font-size:13px" id="fin-info"></span>
+        <span class="auto-save-indicator" id="fin-save-status">已同步</span>
+      </div>
+    </div>
+    <h3 style="margin:18px 0 10px;color:#1e3a5f;font-size:16px">① 利润汇总</h3>
+    <div class="stats-table-wrapper"><table class="stats-table" id="fin-summary-table"></table></div>
+    <h3 style="margin:18px 0 10px;color:#1e3a5f;font-size:16px">② 项目收入明细</h3>
+    <div class="stats-table-wrapper"><table class="stats-table" id="fin-rev-table"><tbody id="fin-rev-tbody"></tbody></table></div>
+    <h3 style="margin:18px 0 10px;color:#1e3a5f;font-size:16px">③ 成本录入</h3>
+    <div id="fin-tabs" style="margin-bottom:10px"></div>
+    <div class="stats-table-wrapper"><table class="stats-table" id="fin-cost-table"><tbody id="fin-cost-tbody"></tbody></table></div>
+    <div id="fin-cost-total" style="text-align:right;padding:10px 12px;font-weight:700;color:#1e3a5f"></div>
+    <div class="stats-actions"><button class="btn-action btn-primary" onclick="FinanceStats.exportPDF()">📥 导出PDF</button><button class="btn-excel" onclick="FinanceStats.exportExcel()">📊 导出Excel</button></div>
+  </div>
+</div>
+
 <!-- ====== 视图：错误总结日志 ====== -->
 <div id="view-errorlog" style="display:none">
   <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>⚠️ 错误总结日志</h1><p>Supabase 云端 · 多人共享 · 历史教训防重犯</p></div></div>
@@ -545,6 +571,11 @@
 .profit-row input:focus{border-color:#3182ce}
 .payee-btn{font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid #cbd5e0;background:#fff;cursor:pointer;color:#718096;flex-shrink:0}
 .payee-btn.filled{color:#3182ce;font-weight:600;border-color:#90cdf4;background:#ebf8ff}
+.fin-year-btn{font-size:12px;padding:4px 14px;border-radius:6px;border:1px solid #cbd5e0;background:#fff;cursor:pointer;margin-right:6px;color:#4a5568}
+.fin-year-btn.active{background:#6b46c1;border-color:#6b46c1;color:#fff;font-weight:700}
+.fin-tab-btn{font-size:13px;padding:6px 16px;border-radius:6px 6px 0 0;border:1px solid #cbd5e0;border-bottom:none;background:#edf2f7;cursor:pointer;margin-right:4px;color:#4a5568}
+.fin-tab-btn.active{background:#fff;color:#6b46c1;font-weight:700}
+.fin-row-warn{background:#fffaf0}
 .profit-subtotal{display:flex;justify-content:space-between;padding:6px 10px;background:#f7fafc;border-radius:6px;font-size:13px;font-weight:700;color:#2d3748;margin-bottom:4px}
 .profit-total-bar{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:10px 14px;background:#f0fff4;border:2px solid #38a169;border-radius:8px;font-size:15px;font-weight:700;color:#276749}
 .profit-fallback-note{margin-top:10px;padding:8px 10px;background:#fefcbf;border:1px solid #f6e05e;border-radius:6px;font-size:12px;color:#744210}
@@ -623,6 +654,39 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-finance-pwd">
+  <div class="modal-box" style="width:380px">
+    <div class="modal-header">
+      <h3>🔒 财务看板密码</h3>
+      <button class="modal-close" onclick="FinanceStats.pwdCancel()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="profit-row"><label>请输入访问密码</label><input type="password" id="finance-pwd-input" style="width:200px;text-align:left" onkeydown="if(event.key==='Enter')FinanceStats.pwdOk()"></div>
+      <div id="finance-pwd-err" style="color:#e53e3e;font-size:13px;min-height:18px;margin:4px 0"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn-action btn-primary" onclick="FinanceStats.pwdOk()">确定</button>
+        <button class="btn-action" style="background:#a0aec0" onclick="FinanceStats.pwdCancel()">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-addmonth">
+  <div class="modal-box" style="width:380px">
+    <div class="modal-header">
+      <h3>📅 加月份列</h3>
+      <button class="modal-close" onclick="FinanceStats.closeAddMonth()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="profit-row"><label>年份</label><input type="number" id="am-year" style="width:120px;text-align:left"></div>
+      <div class="profit-row"><label>月份</label><select id="am-month" style="width:120px;padding:6px 8px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px"><option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+        <button class="btn-action btn-primary" onclick="FinanceStats.saveAddMonth()">💾 保存</button>
+        <button class="btn-action" style="background:#a0aec0" onclick="FinanceStats.closeAddMonth()">✕ 取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
 
@@ -641,7 +705,7 @@
   function fmtPct(v){return v.toFixed(3)+'%';}
 
   window.showView=function(view){
-    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done'),loan:document.getElementById('view-stats-loan'),subsidiary:document.getElementById('view-stats-subsidiary'),errorlog:document.getElementById('view-errorlog'),guide:document.getElementById('view-guide'),guideDetail:document.getElementById('view-guide-detail')};
+    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done'),loan:document.getElementById('view-stats-loan'),subsidiary:document.getElementById('view-stats-subsidiary'),finance:document.getElementById('view-stats-finance'),errorlog:document.getElementById('view-errorlog'),guide:document.getElementById('view-guide'),guideDetail:document.getElementById('view-guide-detail')};
     Object.values(els).forEach(function(e){if(e)e.style.display='none';});
     if(view==='home'){saveInputs(currentCalcType);els.home.style.display='block';}
     else if(view==='bill'||view==='lc'){saveInputs(currentCalcType);currentCalcType=view;applyLabels(view);restoreInputs(view);els.calc.style.display='block';recalc();}
@@ -651,6 +715,7 @@
     else if(view==='stats-done'){if(els.done){els.done.style.display='block';Stats.render('done');}}
     else if(view==='stats-loan'){if(els.loan){els.loan.style.display='block';LoanStats.render();}}
     else if(view==='stats-subsidiary'){if(els.subsidiary){els.subsidiary.style.display='block';SubsidiaryStats.render();}}
+    else if(view==='stats-finance'){if(els.finance){els.finance.style.display='block';FinanceStats.render();}}
     else if(view==='errorlog'){if(els.errorlog){els.errorlog.style.display='block';ErrorLogStats.render();}}
     else if(view==='guide'){if(els.guide){els.guide.style.display='block';Guide.renderList();}}
     else if(view==='guide-detail'){if(els.guideDetail){els.guideDetail.style.display='block';Guide.renderDetail();}}
@@ -1054,6 +1119,14 @@ document.getElementById(stage+'-save-status').style.display='none';
   function loanInsert(records){return fetch(LOAN_API,{method:'POST',headers:{apikey:LOAN_KEY,Authorization:'Bearer '+LOAN_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(records)}).then(function(r){return r.json()})}
   function loanUpdate(id,fields){return fetch(LOAN_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:LOAN_KEY,Authorization:'Bearer '+LOAN_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
   function loanDelete(id){return fetch(LOAN_API+'?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{apikey:LOAN_KEY,Authorization:'Bearer '+LOAN_KEY}})}
+
+  // ===== Supabase 财务看板成本 CRUD =====
+  var FINANCE_API='https://jpcjwhyotcrhxstzwzid.supabase.co/rest/v1/finance_costs';
+  var FINANCE_KEY=SB_KEY;
+  function finGetAll(){return fetch(FINANCE_API+'?order=id.asc',{headers:{apikey:FINANCE_KEY,Authorization:'Bearer '+FINANCE_KEY}}).then(function(r){return r.json()})}
+  function finInsert(records){return fetch(FINANCE_API,{method:'POST',headers:{apikey:FINANCE_KEY,Authorization:'Bearer '+FINANCE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(records)}).then(function(r){return r.json()})}
+  function finUpdate(id,fields){return fetch(FINANCE_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:FINANCE_KEY,Authorization:'Bearer '+FINANCE_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
+  function finDelete(ids){var list=Array.isArray(ids)?ids:[ids];return fetch(FINANCE_API+'?id=in.('+list.map(function(x){return encodeURIComponent(x)}).join(',')+')',{method:'DELETE',headers:{apikey:FINANCE_KEY,Authorization:'Bearer '+FINANCE_KEY}})}
 
   var LOAN_BIZ_TYPES=['商票质押贷款','存单质押贷款','其他'];
   function loanBizTypeOpts(sel){var o='<option value="">选择类型</option>';for(var i=0;i<LOAN_BIZ_TYPES.length;i++)o+='<option value="'+LOAN_BIZ_TYPES[i]+'"'+(sel===LOAN_BIZ_TYPES[i]?' selected':'')+'>'+LOAN_BIZ_TYPES[i]+'</option>';return o}
@@ -1840,6 +1913,60 @@ document.getElementById(stage+'-save-status').style.display='none';
   function subsidiaryUpdate(id,fields){return fetch(SUBSIDIARY_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:SUBSIDIARY_KEY,Authorization:'Bearer '+SUBSIDIARY_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
   function subsidiaryDelete(id){return fetch(SUBSIDIARY_API+'?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{apikey:SUBSIDIARY_KEY,Authorization:'Bearer '+SUBSIDIARY_KEY}})}
 
+  // ===== 财务看板 =====
+  var FINANCE_PWD='XSMYZY';
+  var FIN_TABS={fixed:{label:'公司固定成本',groups:'subs',items:['房租（含水电）','人力成本','代理记账费','税费','其他']},chain:{label:'链条费',groups:['化肥','橡胶'],items:['链条费','货转仓储费','城投公司利润留存']},reimburse:{label:'报销费',groups:null,items:['业务招待费','差旅费','礼品']},other:{label:'其他支出',groups:null,items:null}};
+  var FinanceStats={
+    _cache:{done:[],costs:[],subs:[]},
+    _year:new Date().getFullYear(),
+    _tab:'fixed',
+    _editing:null,
+    _loaded:false,
+    cardClick:function(){
+      if(sessionStorage.getItem('fin_unlocked')==='1'){showView('stats-finance');return}
+      document.getElementById('finance-pwd-input').value='';
+      document.getElementById('finance-pwd-err').textContent='';
+      document.getElementById('modal-finance-pwd').className='modal-overlay active';
+    },
+    pwdOk:function(){
+      if(document.getElementById('finance-pwd-input').value===FINANCE_PWD){
+        sessionStorage.setItem('fin_unlocked','1');
+        document.getElementById('modal-finance-pwd').className='modal-overlay';
+        showView('stats-finance');
+      }else{
+        document.getElementById('finance-pwd-err').textContent='密码错误';
+      }
+    },
+    pwdCancel:function(){document.getElementById('modal-finance-pwd').className='modal-overlay'},
+    showAddMonth:function(){document.getElementById('modal-addmonth').className='modal-overlay active'},
+    closeAddMonth:function(){document.getElementById('modal-addmonth').className='modal-overlay'},
+    async load(){
+      async function safe(p){try{var v=await p;return Array.isArray(v)?v:[]}catch(e){return[]}}
+      var done=await safe(sbGet('done'));
+      var costs=await safe(finGetAll());
+      var subs=await safe(subsidiaryGetAll());
+      done.sort(function(a,b){return doneTimeVal(b)-doneTimeVal(a)});
+      this._cache={done:done,costs:costs,subs:subs};
+      this._loaded=true;
+    },
+    async render(){
+      if(!this._loaded)await this.load();
+      var inc=0;
+      for(var i=0;i<this._cache.done.length;i++){var r=this._cache.done[i];if(r.business_segment==='自营'&&r.profit_included!==false)inc++}
+      document.getElementById('fin-info').textContent='成本 '+this._cache.costs.length+' 条 · 自营收入 '+inc+' 条';
+      this.renderYearBtns();
+      this.renderSummary();
+      this.renderRevenue();
+      this.renderTabs();
+      this.renderCosts();
+    },
+    renderYearBtns:function(){},
+    renderSummary:function(){},
+    renderRevenue:function(){},
+    renderTabs:function(){},
+    renderCosts:function(){}
+  };
+
   var SubsidiaryStats={
     _cache:[],
     _editing:null,
@@ -1990,6 +2117,7 @@ document.getElementById(stage+'-save-status').style.display='none';
   window.Stats = Stats;
   window.LoanStats = LoanStats;
   window.SubsidiaryStats = SubsidiaryStats;
+  window.FinanceStats = FinanceStats;
   window.ErrorLogStats = ErrorLogStats;
   window.Guide = Guide;
   window.GUIDE_DATA = GUIDE_DATA;
