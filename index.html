@@ -624,6 +624,7 @@
       <div class="profit-row"><label>户名</label><input type="text" id="payee-name" style="width:240px;text-align:left"></div>
       <div class="profit-row"><label>账号</label><input type="text" id="payee-account" style="width:240px;text-align:left"></div>
       <div class="profit-row"><label>开户行</label><input type="text" id="payee-bank" style="width:240px;text-align:left"></div>
+      <div class="profit-row"><label>核对完成</label><input type="checkbox" id="payee-verified" style="width:18px;height:18px;accent-color:#3182ce;cursor:pointer"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
         <button class="btn-action btn-primary" onclick="Stats.savePayee()">💾 保存</button>
         <button class="btn-action" style="background:#a0aec0" onclick="Stats.closePayee()">✕ 取消</button>
@@ -982,6 +983,7 @@ document.getElementById(stage+'-save-status').style.display='none';
       document.getElementById('payee-name').value=p.name||'';
       document.getElementById('payee-account').value=p.acct||'';
       document.getElementById('payee-bank').value=p.bank||'';
+      document.getElementById('payee-verified').checked=!!p.verified;
       document.getElementById('modal-payee').className='modal-overlay active';
     },
     closePayee:function(){document.getElementById('modal-payee').className='modal-overlay'},
@@ -993,7 +995,7 @@ document.getElementById(stage+'-save-status').style.display='none';
       var d=parseDetail(r);
       if(!d)d=legacyDetail(r);
       d.payee=d.payee||{};
-      d.payee[ctx.key]={name:document.getElementById('payee-name').value.trim(),acct:document.getElementById('payee-account').value.trim(),bank:document.getElementById('payee-bank').value.trim()};
+      d.payee[ctx.key]={name:document.getElementById('payee-name').value.trim(),acct:document.getElementById('payee-account').value.trim(),bank:document.getElementById('payee-bank').value.trim(),verified:document.getElementById('payee-verified').checked};
       r.profit_detail=JSON.stringify(d);
       r.updated_at=new Date().toISOString();
       await this.updateRecord(ctx.id,{profit_detail:r.profit_detail,updated_at:r.updated_at});
@@ -1011,7 +1013,7 @@ document.getElementById(stage+'-save-status').style.display='none';
       var iSum=0,eSum=0;
       var html='<div class="profit-group-title">📈 收入项</div>';
       for(var i=0;i<items.income.length;i++){var k=items.income[i][0],lab=items.income[i][1];var v=parseFloat(inc[k])||0;iSum+=v;
-        html+='<div class="profit-row"><label>'+lab+'</label><button type="button" class="payee-btn'+((d.payee&&d.payee[k])?' filled':'')+'" onclick="Stats.showPayee(\''+escHtml(id)+'\',\''+k+'\')">收款信息</button><input type="number" step="0.01" value="'+(inc[k]==null?'':v)+'" onchange="Stats.profitDetailChange(\''+escHtml(id)+'\',\'income\',\''+k+'\',this.value)"></div>'}
+        html+='<div class="profit-row"><label>'+lab+'</label><button type="button" class="payee-btn'+((d.payee&&d.payee[k]&&d.payee[k].verified)?' filled':'')+'" onclick="Stats.showPayee(\''+escHtml(id)+'\',\''+k+'\')">收款信息</button><input type="number" step="0.01" value="'+(inc[k]==null?'':v)+'" onchange="Stats.profitDetailChange(\''+escHtml(id)+'\',\'income\',\''+k+'\',this.value)"></div>'}
       html+='<div class="profit-subtotal"><span>收入合计</span><span id="pd-inc-sum">'+iSum.toFixed(2)+'</span></div>';
       html+='<div class="profit-group-title">📉 支出项</div>';
       for(var i=0;i<items.expense.length;i++){var k=items.expense[i][0],lab=items.expense[i][1];var v=parseFloat(exp[k])||0;eSum+=v;
