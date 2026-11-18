@@ -543,6 +543,8 @@
 .profit-row label{flex:1;font-size:13px;color:#4a5568}
 .profit-row input{width:120px;padding:6px 8px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:right;outline:none}
 .profit-row input:focus{border-color:#3182ce}
+.payee-btn{font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid #cbd5e0;background:#fff;cursor:pointer;color:#718096;flex-shrink:0}
+.payee-btn.filled{color:#3182ce;font-weight:600;border-color:#90cdf4;background:#ebf8ff}
 .profit-subtotal{display:flex;justify-content:space-between;padding:6px 10px;background:#f7fafc;border-radius:6px;font-size:13px;font-weight:700;color:#2d3748;margin-bottom:4px}
 .profit-total-bar{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:10px 14px;background:#f0fff4;border:2px solid #38a169;border-radius:8px;font-size:15px;font-weight:700;color:#276749}
 .profit-fallback-note{margin-top:10px;padding:8px 10px;background:#fefcbf;border:1px solid #f6e05e;border-radius:6px;font-size:12px;color:#744210}
@@ -578,6 +580,23 @@
     </div>
     <div class="modal-body" id="modal-profit-body">
       <div style="text-align:center;color:#a0aec0;padding:20px">加载中...</div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-payee" style="z-index:1100">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-header">
+      <h3>🏦 收款信息</h3>
+      <button class="modal-close" onclick="Stats.closePayee()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="profit-row"><label>户名</label><input type="text" id="payee-name" style="width:240px;text-align:left"></div>
+      <div class="profit-row"><label>账号</label><input type="text" id="payee-account" style="width:240px;text-align:left"></div>
+      <div class="profit-row"><label>开户行</label><input type="text" id="payee-bank" style="width:240px;text-align:left"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+        <button class="btn-action btn-primary" onclick="Stats.savePayee()">💾 保存</button>
+        <button class="btn-action" style="background:#a0aec0" onclick="Stats.closePayee()">✕ 取消</button>
+      </div>
     </div>
   </div>
 </div>
@@ -703,6 +722,7 @@
   function segmentOpts(sel){var segs=['咨询','自营'];var o='<option value="">选择板块</option>';for(var i=0;i<segs.length;i++)o+='<option value="'+segs[i]+'"'+(sel===segs[i]?' selected':'')+'>'+segs[i]+'</option>';return o}
   var SEG_ITEMS={'咨询':{income:[['service_fee','服务费收入'],['other','其他收入']],expense:[['service_provider','服务商支出'],['other','其他支出']]},'自营':{income:[['service_fee','服务费收入'],['deposit_interest','存款利息收入'],['post_interest','后置利息收入'],['other','其他收入']],expense:[['service_provider','服务商支出'],['discount','贴现/议付支出'],['capital_occupy','资金占用支出'],['guarantee_fee','担保费'],['loan_interest','贷款利息'],['retained_profit','留存利润支出'],['handling_fee','手续费支出'],['other','其他支出']]}};
   function parseDetail(r){try{var d=JSON.parse(r.profit_detail||'');return(d&&typeof d==='object')?d:null}catch(e){return null}}
+  function legacyDetail(r){return{income:{other:parseFloat(r.actual_revenue)||0},expense:{other:parseFloat(r.actual_cost)||0}}}
   function effProfit(r){var d=parseDetail(r);if(d){var s=0,k,inc=d.income||{},exp=d.expense||{};for(k in inc)s+=parseFloat(inc[k])||0;for(k in exp)s-=parseFloat(exp[k])||0;return s}return(parseFloat(r.actual_revenue||0)-parseFloat(r.actual_cost||0))}
   function doneTimeVal(r){var m=String((r&&r.time)||'').match(/(\d{4})\D*(\d{1,2})?\D*(\d{1,2})?/);if(!m)return 0;return parseInt(m[1],10)*10000+(parseInt(m[2],10)||0)*100+(parseInt(m[3],10)||0)}
   function escHtml(s){if(s===null||s===undefined)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
@@ -888,6 +908,33 @@ document.getElementById(stage+'-save-status').style.display='none';
       document.getElementById('modal-profit').className='modal-overlay active';
     },
     closeProfitDetail:function(){document.getElementById('modal-profit').className='modal-overlay'},
+    _payeeCtx:null,
+    showPayee:function(id,key){
+      var r=this._cache['done'].find(function(x){return x.id===id});
+      if(!r)return;
+      this._payeeCtx={id:id,key:key};
+      var d=parseDetail(r),p=(d&&d.payee&&d.payee[key])||{};
+      document.getElementById('payee-name').value=p.name||'';
+      document.getElementById('payee-account').value=p.acct||'';
+      document.getElementById('payee-bank').value=p.bank||'';
+      document.getElementById('modal-payee').className='modal-overlay active';
+    },
+    closePayee:function(){document.getElementById('modal-payee').className='modal-overlay'},
+    async savePayee(){
+      var ctx=this._payeeCtx;if(!ctx)return;
+      var r=this._cache['done'].find(function(x){return x.id===ctx.id});
+      if(!r)return;
+      // 老数据无明细时先按旧口径带入（与 seedDetailFromLegacy 同语义），保证保存收款信息不改变利润
+      var d=parseDetail(r);
+      if(!d)d=legacyDetail(r);
+      d.payee=d.payee||{};
+      d.payee[ctx.key]={name:document.getElementById('payee-name').value.trim(),acct:document.getElementById('payee-account').value.trim(),bank:document.getElementById('payee-bank').value.trim()};
+      r.profit_detail=JSON.stringify(d);
+      r.updated_at=new Date().toISOString();
+      await this.updateRecord(ctx.id,{profit_detail:r.profit_detail,updated_at:r.updated_at});
+      this.closePayee();
+      this.renderProfitDetail(ctx.id);
+    },
     renderProfitDetail:function(id){
       var r=this._cache['done'].find(function(x){return x.id===id});
       if(!r)return;
@@ -899,7 +946,7 @@ document.getElementById(stage+'-save-status').style.display='none';
       var iSum=0,eSum=0;
       var html='<div class="profit-group-title">📈 收入项</div>';
       for(var i=0;i<items.income.length;i++){var k=items.income[i][0],lab=items.income[i][1];var v=parseFloat(inc[k])||0;iSum+=v;
-        html+='<div class="profit-row"><label>'+lab+'</label><input type="number" step="0.01" value="'+(inc[k]==null?'':v)+'" onchange="Stats.profitDetailChange(\''+escHtml(id)+'\',\'income\',\''+k+'\',this.value)"></div>'}
+        html+='<div class="profit-row"><label>'+lab+'</label><button type="button" class="payee-btn'+((d.payee&&d.payee[k])?' filled':'')+'" onclick="Stats.showPayee(\''+escHtml(id)+'\',\''+k+'\')">收款信息</button><input type="number" step="0.01" value="'+(inc[k]==null?'':v)+'" onchange="Stats.profitDetailChange(\''+escHtml(id)+'\',\'income\',\''+k+'\',this.value)"></div>'}
       html+='<div class="profit-subtotal"><span>收入合计</span><span id="pd-inc-sum">'+iSum.toFixed(2)+'</span></div>';
       html+='<div class="profit-group-title">📉 支出项</div>';
       for(var i=0;i<items.expense.length;i++){var k=items.expense[i][0],lab=items.expense[i][1];var v=parseFloat(exp[k])||0;eSum+=v;
@@ -939,7 +986,7 @@ document.getElementById(stage+'-save-status').style.display='none';
     async seedDetailFromLegacy(id){
       var r=this._cache['done'].find(function(x){return x.id===id});
       if(!r)return;
-      var d={income:{other:parseFloat(r.actual_revenue)||0},expense:{other:parseFloat(r.actual_cost)||0}};
+      var d=legacyDetail(r);
       r.profit_detail=JSON.stringify(d);
       r.updated_at=new Date().toISOString();
       await this.updateRecord(id,{profit_detail:r.profit_detail,updated_at:r.updated_at});
