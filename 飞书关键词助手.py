@@ -14,6 +14,10 @@ def 查询(stage):
     r = requests.get(f"{SB_URL}?stage=eq.{stage}&order=created_at.desc", headers=HEADERS)
     return r.json() if r.status_code == 200 else []
 
+def 计入利润(r):
+    """完成阶段行是否计入利润汇总：与网页端 profit_included!==false 同口径（缺列/None 视为勾选；Python端过滤而非查询参数，对旧数据安全）"""
+    return r.get("profit_included") is not False
+
 def 明细利润(r):
     """完成阶段利润：有收支明细按明细合计，否则回退 实收−实付（与网页端 effProfit 同口径）"""
     try:
@@ -70,7 +74,7 @@ def 查中标():
 def 查完成():
     data = 查询("done")
     if not data: return 发卡片("完成阶段项目汇总", "目前 **无** 完成阶段项目。", [])
-    total = sum(明细利润(r) for r in data)
+    total = sum(明细利润(r) for r in data if 计入利润(r))  # 与网页三汇总同口径：未勾选"计入利润"的行不计入
     列表 = []
     for r in data[:10]:
         列表.append(f"• {r.get('region','-')} | {r.get('company','-')} | 利润{明细利润(r):.2f}万")
@@ -80,7 +84,7 @@ def 查完成():
 def 查全部():
     bid = 查询("bid"); win = 查询("win"); done = 查询("done")
     win_p = sum(float(r.get("est_profit", 0) or 0) for r in win)
-    done_p = sum(明细利润(r) for r in done)
+    done_p = sum(明细利润(r) for r in done if 计入利润(r))  # 与网页三汇总同口径：未勾选"计入利润"的行不计入
     列表 = [
         f"📝 投标：**{len(bid)}** 个",
         f"🏆 中标：**{len(win)}** 个 | 预计利润 **{win_p:.0f}万**",
