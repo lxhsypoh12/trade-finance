@@ -2140,8 +2140,149 @@ document.getElementById(stage+'-save-status').style.display='none';
       html+='<td></td></tr></tfoot>';
       document.getElementById('fin-rev-table').innerHTML=html;
     },
-    renderTabs:function(){},
-    renderCosts:function(){}
+    renderTabs:function(){
+      var keys=Object.keys(FIN_TABS),i,html='';
+      for(i=0;i<keys.length;i++){
+        html+='<button class="fin-tab-btn'+(this._tab===keys[i]?' active':'')+'" onclick="FinanceStats.setTab(\''+keys[i]+'\')">'+FIN_TABS[keys[i]].label+'</button>';
+      }
+      html+='<button class="btn-action btn-add" style="margin-left:10px" onclick="FinanceStats.addRecord()">＋ 添加</button>';
+      document.getElementById('fin-tabs').innerHTML=html;
+    },
+    setTab:function(t){this._tab=t;this._editing=null;this.renderTabs();this.renderCosts()},
+    addRecord:function(){this._editing='new';this.renderCosts()},
+    startEdit:function(id){this._editing=id;this.renderCosts()},
+    cancelEdit:function(){this._editing=null;this.renderCosts()},
+    periodGranChange:function(){
+      var g=document.getElementById('fin-edit-pgran').value;
+      document.getElementById('fin-edit-pm-wrap').style.display=(g==='月')?'':'none';
+    },
+    groupManual:function(){
+      // fixed 页签分组下拉选「手动输入…」→ 原位换成 text 输入（id 不变，datalist 建议仍在）
+      var s=document.getElementById('fin-edit-group');
+      if(s&&s.tagName==='SELECT'&&s.value==='__manual__'){
+        var inp=document.createElement('input');
+        inp.type='text';inp.id='fin-edit-group';
+        inp.setAttribute('list','fin-group-list');
+        s.parentNode.replaceChild(inp,s);
+        inp.focus();
+      }
+    },
+    finEditRow:function(r){
+      // 编辑态行内控件；r=null → 新记录（默认当前年+月粒度+当前月，金额空）
+      // 期间粒度仅 全年/月 两档（规格§5.3 2026-11-19修订：季度档取消）；历史季度记录编辑时回显「全年」，保存即转年粒度
+      var tab=FIN_TABS[this._tab],hasGrp=!!tab.groups,now=new Date(),i,h='';
+      var p=finParsePeriod(r?r.period:'');
+      var gran=(p&&p.gran!=='month')?'全年':'月';
+      var yr=p?p.y:now.getFullYear();
+      var mo=(p&&p.gran==='month')?p.m:now.getMonth()+1;
+      var ys={},yl;
+      for(i=0;i<this._cache.costs.length;i++){var pp=finParsePeriod(this._cache.costs[i].period);if(pp)ys[pp.y]=1}
+      ys[now.getFullYear()-1]=1;ys[now.getFullYear()]=1;ys[now.getFullYear()+1]=1;
+      yl=Object.keys(ys).map(Number).sort(function(a,b){return a-b});
+      h+='<td><select id="fin-edit-pyear">';
+      for(i=0;i<yl.length;i++)h+='<option value="'+yl[i]+'"'+(yl[i]===yr?' selected':'')+'>'+yl[i]+'年</option>';
+      h+='</select> <select id="fin-edit-pgran" onchange="FinanceStats.periodGranChange()"><option value="全年"'+(gran==='全年'?' selected':'')+'>全年</option><option value="月"'+(gran==='月'?' selected':'')+'>月</option></select> <span id="fin-edit-pm-wrap"'+(gran==='月'?'':' style="display:none"')+'><select id="fin-edit-pm">';
+      for(i=1;i<=12;i++)h+='<option value="'+(i<10?'0':'')+i+'"'+(i===mo?' selected':'')+'>'+i+'月</option>';
+      h+='</select></span></td>';
+      if(hasGrp){
+        var gv=r?String(r.group_name||''):'';
+        if(this._tab==='fixed'){
+          var inList=!gv,dl='<datalist id="fin-group-list">',opts='',cn;
+          for(i=0;i<this._cache.subs.length;i++){
+            cn=String(this._cache.subs[i].company_name||'');
+            dl+='<option value="'+escHtml(cn)+'"></option>';
+            opts+='<option value="'+escHtml(cn)+'"'+(cn===gv?' selected':'')+'>'+escHtml(cn)+'</option>';
+            if(cn===gv)inList=true;
+          }
+          dl+='</datalist>';
+          if(inList){
+            h+='<td><select id="fin-edit-group" onchange="FinanceStats.groupManual()"><option value="__manual__"'+(!gv?' selected':'')+'>手动输入…</option>'+opts+'</select>'+dl+'</td>';
+          }else{
+            h+='<td><input type="text" id="fin-edit-group" list="fin-group-list" value="'+escHtml(gv)+'">'+dl+'</td>';
+          }
+        }else{
+          h+='<td><input type="text" id="fin-edit-group" list="fin-group-chain-list" value="'+escHtml(gv)+'"><datalist id="fin-group-chain-list">';
+          for(i=0;i<tab.groups.length;i++)h+='<option value="'+escHtml(tab.groups[i])+'"></option>';
+          h+='</datalist></td>';
+        }
+      }
+      h+='<td><input type="text" id="fin-edit-item" value="'+escHtml(r?String(r.item_name||''):'')+'"'+(tab.items?' list="fin-item-list"':'')+'>';
+      if(tab.items){
+        h+='<datalist id="fin-item-list">';
+        for(i=0;i<tab.items.length;i++)h+='<option value="'+escHtml(tab.items[i])+'"></option>';
+        h+='</datalist>';
+      }
+      h+='</td>';
+      h+='<td><input type="number" id="fin-edit-amount" step="0.01" style="min-width:80px" value="'+(r?escHtml(r.amount===null||r.amount===undefined?'':r.amount):'')+'"></td>';
+      h+='<td><input type="text" id="fin-edit-remark" value="'+escHtml(r?String(r.remark||''):'')+'"></td>';
+      h+='<td><button class="loan-action-btn loan-save-btn" onclick="FinanceStats.saveEdit('+(r?r.id:'')+')">💾</button><button class="loan-action-btn loan-del-btn" onclick="FinanceStats.cancelEdit()">✕</button></td>';
+      return '<tr>'+h+'</tr>';
+    },
+    renderCosts:function(){
+      var tab=FIN_TABS[this._tab],hasGrp=!!tab.groups,rows=[],i,r;
+      for(i=0;i<this._cache.costs.length;i++){r=this._cache.costs[i];if(r.cost_type===this._tab)rows.push(r)}
+      rows.sort(function(a,b){
+        // period 字符串降序（finParsePeriod null 排最后）→ group_name → item_name
+        var pa=finParsePeriod(a.period),pb=finParsePeriod(b.period);
+        if(!pa&&pb)return 1;
+        if(pa&&!pb)return -1;
+        if(pa&&pb&&a.period!==b.period)return a.period<b.period?1:-1;
+        var ga=String(a.group_name||''),gb=String(b.group_name||'');
+        if(ga!==gb)return ga<gb?-1:1;
+        return String(a.item_name||'')<String(b.item_name||'')?-1:1;
+      });
+      var html='<thead><tr><th>期间</th>'+(hasGrp?'<th id="fin-cost-th-group">'+(this._tab==='fixed'?'公司':'品种')+'</th>':'')+'<th>明细</th><th>金额(元)</th><th>备注</th><th>操作</th></tr></thead><tbody id="fin-cost-tbody">';
+      var sum=0;
+      if(this._editing==='new')html+=this.finEditRow(null);
+      for(i=0;i<rows.length;i++){
+        r=rows[i];
+        sum+=parseFloat(r.amount)||0;
+        if(this._editing===r.id){html+=this.finEditRow(r);continue}
+        html+='<tr><td>'+escHtml(r.period||'')+'</td>';
+        if(hasGrp)html+='<td>'+escHtml(r.group_name||'')+'</td>';
+        html+='<td>'+escHtml(r.item_name||'')+'</td><td>'+(parseFloat(r.amount)||0).toFixed(2)+'</td><td>'+escHtml(r.remark||'')+'</td>';
+        html+='<td><button class="loan-action-btn loan-edit-btn" onclick="FinanceStats.startEdit('+r.id+')">✏️</button><button class="loan-action-btn loan-del-btn" onclick="FinanceStats.deleteRecord('+r.id+')">🗑</button></td></tr>';
+      }
+      if(!rows.length&&this._editing!=='new')html+='<tr><td colspan="'+(hasGrp?6:5)+'" class="empty-hint">暂无记录，点「＋ 添加」开始</td></tr>';
+      html+='</tbody>';
+      document.getElementById('fin-cost-table').innerHTML=html;
+      document.getElementById('fin-cost-total').textContent='本页签合计（元）: '+sum.toFixed(2);
+    },
+    async _refreshCosts(){try{this._cache.costs=await finGetAll()||[]}catch(e){}},
+    async saveEdit(id){
+      var py=document.getElementById('fin-edit-pyear').value;
+      var gran=document.getElementById('fin-edit-pgran').value;
+      var pm=document.getElementById('fin-edit-pm').value;
+      var amount=parseFloat(document.getElementById('fin-edit-amount').value);
+      if(isNaN(amount)){alert('金额必须是数字');return}
+      var gEl=document.getElementById('fin-edit-group'),gv=gEl?gEl.value.trim():'';
+      if(gv==='__manual__')gv='';
+      var fields={cost_type:this._tab,group_name:gv,item_name:document.getElementById('fin-edit-item').value.trim(),period:gran==='月'?py+'-'+pm:py,amount:amount,remark:document.getElementById('fin-edit-remark').value.trim()};
+      var st=document.getElementById('fin-save-status');
+      try{
+        if(this._editing==='new')await finInsert([fields]);
+        else await finUpdate(id,fields);
+        await this._refreshCosts();
+        this._editing=null;
+        await this.render();
+        st.textContent='已同步';st.style.display='inline';
+      }catch(e){
+        st.textContent='保存失败';st.style.display='inline';
+      }
+    },
+    async deleteRecord(id){
+      if(!confirm('确认删除此条成本记录？\n（此操作不可恢复）'))return;
+      var st=document.getElementById('fin-save-status');
+      try{
+        await finDelete(id);
+        await this._refreshCosts();
+        if(this._editing===id)this._editing=null;
+        await this.render();
+        st.textContent='已同步';st.style.display='inline';
+      }catch(e){
+        st.textContent='删除失败';st.style.display='inline';
+      }
+    }
   };
 
   var SubsidiaryStats={
