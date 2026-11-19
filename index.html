@@ -485,7 +485,7 @@
     <div class="stats-toolbar">
       <div class="toolbar-left">
         <span id="fin-year-btns" style="margin-right:8px"></span>
-        <button class="btn-action btn-add" id="fin-addmonth-btn" onclick="FinanceStats.showAddMonth()">＋加月份列</button>
+        <button class="btn-action btn-add" id="fin-addmonth-btn" onclick="FinanceStats.openAddMonth()">＋加月份列</button>
         <span style="color:#718096;font-size:13px" id="fin-info"></span>
         <span class="auto-save-indicator" id="fin-save-status">已同步</span>
       </div>
@@ -678,10 +678,10 @@
       <button class="modal-close" onclick="FinanceStats.closeAddMonth()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="profit-row"><label>年份</label><input type="number" id="am-year" style="width:120px;text-align:left"></div>
-      <div class="profit-row"><label>月份</label><select id="am-month" style="width:120px;padding:6px 8px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px"><option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></div>
+      <div class="profit-row"><label>年份</label><input type="number" id="am-year" style="width:120px;text-align:left" oninput="FinanceStats.refreshAddMonth()" onchange="FinanceStats.refreshAddMonth()"></div>
+      <div class="profit-row"><label>月份</label><select id="am-month" style="width:120px;padding:6px 8px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px"><option value="01">1月</option><option value="02">2月</option><option value="03">3月</option><option value="04">4月</option><option value="05">5月</option><option value="06">6月</option><option value="07">7月</option><option value="08">8月</option><option value="09">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
-        <button class="btn-action btn-primary" onclick="FinanceStats.saveAddMonth()">💾 保存</button>
+        <button class="btn-action btn-primary" onclick="FinanceStats.addMonthCol()">💾 保存</button>
         <button class="btn-action" style="background:#a0aec0" onclick="FinanceStats.closeAddMonth()">✕ 取消</button>
       </div>
     </div>
@@ -2000,7 +2000,58 @@ document.getElementById(stage+'-save-status').style.display='none';
       }
     },
     pwdCancel:function(){document.getElementById('modal-finance-pwd').className='modal-overlay'},
-    showAddMonth:function(){document.getElementById('modal-addmonth').className='modal-overlay active'},
+    openAddMonth:function(){
+      var d=new Date(),m=d.getMonth()+1;
+      document.getElementById('am-year').value=this._year;
+      document.getElementById('am-month').value=(m<10?'0':'')+m;
+      this.refreshAddMonth();
+      document.getElementById('modal-addmonth').className='modal-overlay active';
+    },
+    _isFixedMonth:function(y,m){return y===this._year&&(this._year>=FIN_MONTHLY_YEAR||m>=10)},// 该年月是否已在当前视图固定显示（决定#21分段：≤2026灰当年10-12月，≥2027灰当年12个月）
+    refreshAddMonth:function(){
+      var y=parseInt(document.getElementById('am-year').value,10),i,key;
+      var sel=document.getElementById('am-month'),extra=this._loadExtra();
+      for(i=0;i<sel.options.length;i++){
+        key=y+'-'+(i<9?'0':'')+(i+1);
+        sel.options[i].disabled=this._isFixedMonth(y,i+1)||extra.indexOf(key)>=0;
+      }
+      if(sel.options[sel.selectedIndex]&&sel.options[sel.selectedIndex].disabled){
+        for(i=0;i<sel.options.length;i++){if(!sel.options[i].disabled){sel.selectedIndex=i;break}}
+      }
+    },
+    addMonthCol:function(){
+      var yv=document.getElementById('am-year').value,mv=document.getElementById('am-month').value;
+      var key=yv+'-'+mv,m=parseInt(mv,10);
+      if(!/^\d{4}-\d{2}$/.test(key)||m<1||m>12){alert('请输入有效的年份和月份');return}
+      if(this._isFixedMonth(parseInt(yv,10),m)){alert('该月份已在表格中固定显示');return}
+      var extra=this._loadExtra();
+      if(extra.indexOf(key)>=0){alert('该月份列已添加');return}
+      extra.push(key);
+      this._saveExtra(extra);
+      this.closeAddMonth();
+      this.renderSummary();
+    },
+    removeMonthCol:function(key){
+      var k=String(key);if(k.charAt(0)==='x')k=k.slice(1);
+      var extra=this._loadExtra(),out=[],i;
+      for(i=0;i<extra.length;i++){if(extra[i]!==k)out.push(extra[i])}
+      this._saveExtra(out);
+      this.renderSummary();
+    },
+    _loadExtra:function(){
+      // localStorage 记忆追加列；损坏自重置[]，垃圾项（非法格式/月份越界）逐项过滤
+      try{
+        var a=JSON.parse(localStorage.getItem('finance_extra_months')||'[]');
+        if(!Array.isArray(a))return[];
+        var out=[],i,s,m;
+        for(i=0;i<a.length;i++){
+          s=String(a[i]);m=parseInt(s.slice(5),10);
+          if(/^\d{4}-\d{2}$/.test(s)&&m>=1&&m<=12)out.push(s);
+        }
+        return out;
+      }catch(e){return[]}
+    },
+    _saveExtra:function(arr){localStorage.setItem('finance_extra_months',JSON.stringify(arr))},
     closeAddMonth:function(){document.getElementById('modal-addmonth').className='modal-overlay'},
     async load(){
       async function safe(p){try{var v=await p;return Array.isArray(v)?v:[]}catch(e){return[]}}
@@ -2032,9 +2083,13 @@ document.getElementById(stage+'-save-status').style.display='none';
       document.getElementById('fin-year-btns').innerHTML=html;
     },
     renderSummary:function(){
-      var agg=finAggregate(this._cache.done,this._cache.costs,this._year,this._extraMonths||[]);
+      var agg=finAggregate(this._cache.done,this._cache.costs,this._year,this._loadExtra());
       var i,j,html='<thead><tr><th></th>';
-      for(i=0;i<agg.cols.length;i++){html+='<th>'+agg.cols[i].label+'</th>'}
+      for(i=0;i<agg.cols.length;i++){
+        html+='<th>'+agg.cols[i].label;
+        if(agg.cols[i].key.charAt(0)==='x')html+='<span onclick="FinanceStats.removeMonthCol(\''+agg.cols[i].key+'\')" style="cursor:pointer;margin-left:5px;color:#a0aec0" title="移除此列">✕</span>';
+        html+='</th>';
+      }
       html+='</tr></thead><tbody>';
       var rows=[['项目收入',agg.income],['成本支出',agg.cost],['其他支出',agg.other],['合计',agg.total]];
       for(i=0;i<rows.length;i++){
