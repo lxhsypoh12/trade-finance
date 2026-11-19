@@ -575,7 +575,7 @@
 .fin-year-btn.active{background:#6b46c1;border-color:#6b46c1;color:#fff;font-weight:700}
 .fin-tab-btn{font-size:13px;padding:6px 16px;border-radius:6px 6px 0 0;border:1px solid #cbd5e0;border-bottom:none;background:#edf2f7;cursor:pointer;margin-right:4px;color:#4a5568}
 .fin-tab-btn.active{background:#fff;color:#6b46c1;font-weight:700}
-.fin-row-warn{background:#fffaf0}
+.fin-row-warn{background:#fffaf0!important}
 .profit-subtotal{display:flex;justify-content:space-between;padding:6px 10px;background:#f7fafc;border-radius:6px;font-size:13px;font-weight:700;color:#2d3748;margin-bottom:4px}
 .profit-total-bar{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:10px 14px;background:#f0fff4;border:2px solid #38a169;border-radius:8px;font-size:15px;font-weight:700;color:#276749}
 .profit-fallback-note{margin-top:10px;padding:8px 10px;background:#fefcbf;border:1px solid #f6e05e;border-radius:6px;font-size:12px;color:#744210}
@@ -2007,7 +2007,6 @@ document.getElementById(stage+'-save-status').style.display='none';
     _year:new Date().getFullYear(),
     _tab:'fixed',
     _editing:null,
-    _loaded:false,
     cardClick:function(){
       if(sessionStorage.getItem('fin_unlocked')==='1'){showView('stats-finance');return}
       document.getElementById('finance-pwd-input').value='';
@@ -2084,10 +2083,9 @@ document.getElementById(stage+'-save-status').style.display='none';
       var subs=await safe(subsidiaryGetAll());
       done.sort(function(a,b){return doneTimeVal(b)-doneTimeVal(a)});
       this._cache={done:done,costs:costs,subs:subs};
-      this._loaded=true;
     },
     async render(){
-      if(!this._loaded)await this.load();
+      await this.load();
       document.getElementById('fin-info').textContent='成本 '+this._cache.costs.length+' 条 · 自营收入 '+finRevRows(this._cache.done).length+' 条';
       this.renderYearBtns();
       this.renderSummary();
@@ -2203,7 +2201,7 @@ document.getElementById(stage+'-save-status').style.display='none';
       if(hasGrp){
         var gv=r?String(r.group_name||''):'';
         if(this._tab==='fixed'){
-          var inList=!gv,dl='<datalist id="fin-group-list">',opts='',cn;
+          var inList=false,dl='<datalist id="fin-group-list">',opts='',cn;
           for(i=0;i<this._cache.subs.length;i++){
             cn=String(this._cache.subs[i].company_name||'');
             dl+='<option value="'+escHtml(cn)+'"></option>';
@@ -2255,7 +2253,6 @@ document.getElementById(stage+'-save-status').style.display='none';
       document.getElementById('fin-cost-table').innerHTML=html;
       document.getElementById('fin-cost-total').textContent='本页签合计（元）: '+sum.toFixed(2);
     },
-    async _refreshCosts(){try{this._cache.costs=await finGetAll()||[]}catch(e){}},
     async saveEdit(id){
       var py=document.getElementById('fin-edit-pyear').value;
       var gran=document.getElementById('fin-edit-pgran').value;
@@ -2269,7 +2266,6 @@ document.getElementById(stage+'-save-status').style.display='none';
       try{
         if(this._editing==='new')await finInsert([fields]);
         else await finUpdate(id,fields);
-        await this._refreshCosts();
         this._editing=null;
         await this.render();
         st.textContent='已同步';st.style.display='inline';
@@ -2282,7 +2278,6 @@ document.getElementById(stage+'-save-status').style.display='none';
       var st=document.getElementById('fin-save-status');
       try{
         await finDelete(id);
-        await this._refreshCosts();
         if(this._editing===id)this._editing=null;
         await this.render();
         st.textContent='已同步';st.style.display='inline';
