@@ -1932,6 +1932,7 @@ document.getElementById(stage+'-save-status').style.display='none';
     var y=Math.floor(v/10000),m=Math.floor(v%10000/100);
     return{y:y,m:m,q:m?Math.ceil(m/3):0};
   }
+  var FIN_MONTHLY_YEAR=2027;// 汇总表布局分界：所选年>=2027用12个月列；<=2026保留1-3季度+10-12月列（用户2026-11-19拍板）
   function finBucketKeys(p,Y,extra){
     var keys=[],i,em,ey,emo;
     if(!p)return['total'];
@@ -1946,13 +1947,20 @@ document.getElementById(stage+'-save-status').style.display='none';
     if(p.y===Y-1)keys.push('prevYear');
     if(p.y===Y){
       keys.push('curYear');
-      if(p.gran!=='quarter'&&p.m>=1&&p.m<=12)keys.push('m'+p.m);
+      if(Y>=FIN_MONTHLY_YEAR){
+        if(p.gran!=='quarter'&&p.m>=1&&p.m<=12)keys.push('m'+p.m);
+      }else{
+        if(p.gran==='quarter'){if(p.q>=1&&p.q<=3)keys.push('q'+p.q)}
+        else if(p.m>=1&&p.m<=9)keys.push('q'+Math.ceil(p.m/3));
+        else if(p.m>=10)keys.push('m'+p.m);
+      }
     }
     return keys;
   }
   function finAggregate(revRows,costRows,Y,extra){
     var cols=[{key:'total',label:'小计'},{key:'prevYear',label:(Y-1)+'全年'},{key:'curYear',label:Y+'全年'}];
-    for(var mo=1;mo<=12;mo++)cols.push({key:'m'+mo,label:mo+'月'});
+    if(Y>=FIN_MONTHLY_YEAR){for(var mo=1;mo<=12;mo++)cols.push({key:'m'+mo,label:mo+'月'});}
+    else{cols.push({key:'q1',label:'1季度'},{key:'q2',label:'2季度'},{key:'q3',label:'3季度'},{key:'m10',label:'10月'},{key:'m11',label:'11月'},{key:'m12',label:'12月'});}
     var i,j,ep;
     for(i=0;i<(extra||[]).length;i++){ep=finParsePeriod(extra[i]);if(ep)cols.push({key:'x'+ep.y+'-'+(ep.m<10?'0'+ep.m:ep.m),label:ep.y+'年'+ep.m+'月'})}
     var income={},cost={},other={},total={};
