@@ -41,9 +41,10 @@
 ### 数据存储：Supabase
 - 项目 URL：`https://jpcjwhyotcrhxstzwzid.supabase.co`
 - 匿名 Key（公开安全）：`sb_publishable_hE4GbUYp-NYiD1SYBvw0wg_yUNtV6Bg`
-- **trade_stats 表**：三阶段统计共用，`stage` 字段区分（`bid`/`win`/`done`）
+- **trade_stats 表**：三阶段统计共用，`stage` 字段区分（`bid`/`win`/`done`）；done 行含 `profit_included` 布尔列（默认 true）——「计入利润」勾选，取消勾选的行不计入网页三汇总与飞书日报总利润
 - **loan_businesses 表**：贷款业务独立表（独立统计、独立通知）
 - **subsidiary_companies 表**：贸易子公司信息汇总表（独立统计，仅查看，不推送飞书日报）
+- **finance_costs 表**：财务看板成本录入表（`cost_type`：fixed=公司固定成本 / chain=链条费 / reimburse=报销费 / other=其他支出；金额单位**元**）
 
 ### REST API 封装（HTML 中）
 ```js
@@ -61,12 +62,18 @@ subsidiaryGetAll()       // GET  subsidiary_companies?order=company_name.asc
 subsidiaryInsert(records)// POST subsidiary_companies
 subsidiaryUpdate(id,fields)// PATCH subsidiary_companies?id=eq.{id}
 subsidiaryDelete(id)     // DELETE subsidiary_companies?id=eq.{id}
+
+finGetAll()        // GET  finance_costs?order=id.asc
+finInsert(records) // POST finance_costs（Prefer: return=representation）
+finUpdate(id,fields)// PATCH finance_costs?id=eq.{id}
+finDelete(ids)     // DELETE finance_costs?id=in.({ids})（单个 id 或数组）
 ```
 
 ### 飞书推送
 - Webhook URL：通过环境变量 `FEISHU_TRADE_WEBHOOK` 读取（GitHub Secrets）
 - Supabase Key：通过环境变量 `FEISHU_SUPABASE_KEY` 读取（GitHub Secrets）
 - 推送卡片格式：`msg_type: interactive`，蓝色 header template，lark_md 正文
+- 完成阶段「实际总利润」只统计 `profit_included ≠ false` 的行（`飞书关键词助手.py` 的 `计入利润()` 谓词，与网页三汇总同口径）；财务看板数据**不**推送日报
 
 ## 主页卡片结构
 
@@ -78,6 +85,7 @@ subsidiaryDelete(id)     // DELETE subsidiary_companies?id=eq.{id}
   └── 📝 投标阶段 | 🏆 中标阶段 | ✅ 完成阶段
   └── 💰 贸易子公司贷款类业务统计（第二行左对齐）
   └── 🏢 贸易子公司统计（第三行左对齐，仅查看，不推送飞书日报）
+  └── 💹 财务看板（第四行左对齐，有前端密码门，不推送飞书日报）
 ```
 
 - 卡片容器：`.home-cards`，`justify-content: flex-start`，`max-width: 1008px`
@@ -107,6 +115,16 @@ subsidiaryDelete(id)     // DELETE subsidiary_companies?id=eq.{id}
 - `SubsidiaryStats.deleteRecord(id)` — 删除单条记录
 - `SubsidiaryStats.exportPDF()` — 导出 PDF
 - **前6月剩余发票量** = 前6月已开发票量 - 前6月使用发票量（自动计算，绿色显示）
+
+### `FinanceStats` 对象（财务看板）
+- `FinanceStats.cardClick()` / `pwdOk()` — 卡片密码门（前端密码，会话内免重复询问：sessionStorage `fin_unlocked`）
+- `FinanceStats.render()` — 加载数据（done/finance_costs/subsidiary_companies）并渲染三大区块
+- `FinanceStats.renderSummary()` — ①利润汇总。**finAggregate 口径**：项目收入=Σ勾选自营行利润合计（effProfit，万元）；成本支出=finance_costs 中 fixed/chain/reimburse ÷10000；其他支出=other ÷10000；合计=收入−成本−其他。列布局按所选年分段：≤2026 为「小计|上一年|当年|1-3季度|10-12月」，≥2027（`FIN_MONTHLY_YEAR`）为「小计|上一年|当年|12个月」
+- `FinanceStats.openAddMonth()` / `addMonthCol()` / `removeMonthCol(key)` — ＋加月份列（localStorage `finance_extra_months` 记忆，仅本浏览器有效）
+- `FinanceStats.renderRevenue()` — ②项目收入明细（只读同步 done 表勾选自营行，21 列含操作列，✏️去修改 跳完成表）
+- `FinanceStats.renderTabs()` / `setTab(t)` / `renderCosts()` — ③成本录入四页签（FIN_TABS：fixed/chain/reimburse/other）
+- `FinanceStats.addRecord()` / `startEdit(id)` / `saveEdit(id)` / `cancelEdit()` / `deleteRecord(id)` — 成本行内 CRUD（期间选择器仅 全年/月 两档；历史季度记录编辑回显全年、保存转年粒度）
+- `FinanceStats.exportExcel()` / `exportPDF()` — 导出：Excel 单文件三段表（汇总含追加列所见即所得＋收入明细 20 列＋成本明细全页签合并，xlsText 防注入＋BOM）；PDF 打印注入标题「贸易板块利润情况」
 
 ## 行着色规则（贷款统计）
 - 🟢 `#c6f6d5`（绿色）：距到期日 > 2 个月
@@ -189,3 +207,27 @@ CREATE POLICY "允许匿名删除" ON subsidiary_companies FOR DELETE TO anon US
 | `invoice_issued_6m` | 前6月已开发票量（万元） |
 | `invoice_used_6m` | 前6月使用发票量（万元） |
 | 前6月剩余已开发票量 | **前端自动计算**：invoice_issued_6m - invoice_used_6m |
+
+## Supabase 建表参考（finance_costs）
+
+```sql
+CREATE TABLE finance_costs (
+  id BIGSERIAL PRIMARY KEY,
+  cost_type TEXT NOT NULL DEFAULT 'fixed',   -- fixed=公司固定成本 chain=链条费 reimburse=报销费 other=其他支出
+  group_name TEXT NOT NULL DEFAULT '',       -- fixed:公司名称 chain:品种(化肥/橡胶…) reimburse/other:留空
+  item_name TEXT NOT NULL DEFAULT '',        -- fixed:房租（含水电）/人力成本/代理记账费/税费/其他 chain:链条费/货转仓储费/城投公司利润留存 reimburse:业务招待费/差旅费/礼品… other:自填明细名
+  period TEXT NOT NULL DEFAULT '',           -- 年'2025' / 季度'2026-Q1' / 月'2026-10'
+  amount NUMERIC NOT NULL DEFAULT 0,         -- 单位：元
+  remark TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE finance_costs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "允许匿名读取" ON finance_costs FOR SELECT TO anon USING (true);
+CREATE POLICY "允许匿名插入" ON finance_costs FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "允许匿名更新" ON finance_costs FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "允许匿名删除" ON finance_costs FOR DELETE TO anon USING (true);
+```
+
+单位与粒度约定：成本按**元**录入存储，财务看板汇总自动 ÷10000 转万元（2位小数）；收入侧 profit_detail 本身即万元。2026 年 10 月起按月录入（用户 2026-11-19 拍板），历史季度记录（2026-Q1/Q2/Q4）保留照常显示，编辑时只能改成年/月粒度。
