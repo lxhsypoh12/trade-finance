@@ -2102,7 +2102,44 @@ document.getElementById(stage+'-save-status').style.display='none';
       }
       document.getElementById('fin-summary-table').innerHTML=html+'</tbody>';
     },
-    renderRevenue:function(){},
+    renderRevenue:function(){
+      // 只读同步 done 表：自营+计入利润的行，按完成时间降序（_cache.done 已排）；与 Excel 2-2 同构 21 列（无收费主体列）
+      var inc=SEG_ITEMS['自营'].income,exp=SEG_ITEMS['自营'].expense;
+      var HEAD=['序号','项目名称','区域','城投','完成时间','利润合计','收入小计','服务费','存款利息','后置利息','其他收入','支出小计','服务商','贴息/议付','资金占用','担保费','贷款利息','留存利润','手续费','其他支出','操作'];
+      var rows=[],i,j,r;
+      for(i=0;i<this._cache.done.length;i++){
+        r=this._cache.done[i];
+        if(r.business_segment==='自营'&&r.profit_included!==false)rows.push(r);
+      }
+      function amt(v){var n=parseFloat(v);return isNaN(n)?'-':n.toFixed(2)}
+      function sumKeys(o,list){var s=0,k;for(k=0;k<list.length;k++)s+=parseFloat(o[list[k][0]])||0;return s}
+      var sums=[];for(i=0;i<15;i++)sums.push(0);
+      var html='<thead><tr>';
+      for(i=0;i<HEAD.length;i++)html+='<th>'+HEAD[i]+'</th>';
+      html+='</tr></thead><tbody id="fin-rev-tbody">';
+      for(j=0;j<rows.length;j++){
+        r=rows[j];
+        var d=parseDetail(r)||{},di=d.income||{},de=d.expense||{};
+        var pname=String(r.project_name||'').trim();
+        var warn=!pname||doneTimeVal(r)===0;
+        var sI=sumKeys(di,inc),sE=sumKeys(de,exp),pf=effProfit(r);
+        sums[0]+=pf;sums[1]+=sI;sums[6]+=sE;
+        for(i=0;i<inc.length;i++)sums[2+i]+=parseFloat(di[inc[i][0]])||0;
+        for(i=0;i<exp.length;i++)sums[7+i]+=parseFloat(de[exp[i][0]])||0;
+        html+='<tr'+(warn?' class="fin-row-warn"':'')+'><td>'+(j+1)+'</td>';
+        html+='<td>'+(pname?escHtml(pname):'(未填项目名)')+'</td>';
+        html+='<td>'+escHtml(r.region||'-')+'</td><td>'+escHtml(r.company||'-')+'</td><td>'+(r.time?escHtml(r.time):'-')+'</td>';
+        html+='<td>'+pf.toFixed(2)+'</td><td>'+sI.toFixed(2)+'</td>';
+        for(i=0;i<inc.length;i++)html+='<td>'+amt(di[inc[i][0]])+'</td>';
+        html+='<td>'+sE.toFixed(2)+'</td>';
+        for(i=0;i<exp.length;i++)html+='<td>'+amt(de[exp[i][0]])+'</td>';
+        html+='<td><button class="loan-action-btn" onclick="showView(\'stats-done\')">✏️ 去修改</button></td></tr>';
+      }
+      html+='</tbody><tfoot><tr><td>合计</td><td></td><td></td><td></td><td></td>';
+      for(i=0;i<15;i++)html+='<td>'+sums[i].toFixed(2)+'</td>';
+      html+='<td></td></tr></tfoot>';
+      document.getElementById('fin-rev-table').innerHTML=html;
+    },
     renderTabs:function(){},
     renderCosts:function(){}
   };
