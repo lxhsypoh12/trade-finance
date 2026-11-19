@@ -1918,7 +1918,31 @@ document.getElementById(stage+'-save-status').style.display='none';
   // ===== 财务看板 =====
   var FINANCE_PWD='XSMYZY';
   var FIN_TABS={fixed:{label:'公司固定成本',groups:'subs',items:['房租（含水电）','人力成本','代理记账费','税费','其他']},chain:{label:'链条费',groups:['化肥','橡胶'],items:['链条费','货转仓储费','城投公司利润留存']},reimburse:{label:'报销费',groups:null,items:['业务招待费','差旅费','礼品']},other:{label:'其他支出',groups:null,items:null}};
+  var FIN_REV_HEAD=['序号','项目名称','区域','城投','完成时间','利润合计','收入小计','服务费','存款利息','后置利息','其他收入','支出小计','服务商','贴息/议付','资金占用','担保费','贷款利息','留存利润','手续费','其他支出'];// 收入明细 20 数据列（规格§5.2；页面另有第21列「操作」按钮列，不入导出）
   function finRevRows(done){return(done||[]).filter(function(r){return r.business_segment==='自营'&&r.profit_included!==false})}
+  function finRevVals(r){
+    // 收入明细行 15 个金额值（页面与导出共用）：[利润合计,收入小计,收入4键,支出小计,支出8键]；明细键为原始值（未填为 undefined），格式化由调用方处理
+    var inc=SEG_ITEMS['自营'].income,exp=SEG_ITEMS['自营'].expense;
+    var d=parseDetail(r)||{},di=d.income||{},de=d.expense||{};
+    var i,sI=0,sE=0,v=[effProfit(r)];
+    for(i=0;i<inc.length;i++)sI+=parseFloat(di[inc[i][0]])||0;
+    for(i=0;i<exp.length;i++)sE+=parseFloat(de[exp[i][0]])||0;
+    v.push(sI);
+    for(i=0;i<inc.length;i++)v.push(di[inc[i][0]]);
+    v.push(sE);
+    for(i=0;i<exp.length;i++)v.push(de[exp[i][0]]);
+    return v;
+  }
+  function finCostSort(a,b){
+    // period 字符串降序（finParsePeriod null 排最后）→ group_name → item_name
+    var pa=finParsePeriod(a.period),pb=finParsePeriod(b.period);
+    if(!pa&&pb)return 1;
+    if(pa&&!pb)return -1;
+    if(pa&&pb&&a.period!==b.period)return a.period<b.period?1:-1;
+    var ga=String(a.group_name||''),gb=String(b.group_name||'');
+    if(ga!==gb)return ga<gb?-1:1;
+    return String(a.item_name||'')<String(b.item_name||'')?-1:1;
+  }
   function finParsePeriod(p){
     var s=String(p==null?'':p).trim(),m;
     if((m=/^(\d{4})$/.exec(s)))return{y:parseInt(m[1],10),q:0,m:0,gran:'year'};
@@ -2104,35 +2128,27 @@ document.getElementById(stage+'-save-status').style.display='none';
     },
     renderRevenue:function(){
       // 只读同步 done 表：自营+计入利润的行，按完成时间降序（_cache.done 已排）；与 Excel 2-2 同构 21 列（无收费主体列）
-      var inc=SEG_ITEMS['自营'].income,exp=SEG_ITEMS['自营'].expense;
-      var HEAD=['序号','项目名称','区域','城投','完成时间','利润合计','收入小计','服务费','存款利息','后置利息','其他收入','支出小计','服务商','贴息/议付','资金占用','担保费','贷款利息','留存利润','手续费','其他支出','操作'];
-      var rows=[],i,j,r;
-      for(i=0;i<this._cache.done.length;i++){
-        r=this._cache.done[i];
-        if(r.business_segment==='自营'&&r.profit_included!==false)rows.push(r);
-      }
+      var HEAD=FIN_REV_HEAD.concat(['操作']);
+      var incN=SEG_ITEMS['自营'].income.length,expN=SEG_ITEMS['自营'].expense.length;
+      var rows=finRevRows(this._cache.done),i,j,r;
       function amt(v){var n=parseFloat(v);return isNaN(n)?'-':n.toFixed(2)}
-      function sumKeys(o,list){var s=0,k;for(k=0;k<list.length;k++)s+=parseFloat(o[list[k][0]])||0;return s}
       var sums=[];for(i=0;i<15;i++)sums.push(0);
       var html='<thead><tr>';
       for(i=0;i<HEAD.length;i++)html+='<th>'+HEAD[i]+'</th>';
       html+='</tr></thead><tbody id="fin-rev-tbody">';
       for(j=0;j<rows.length;j++){
         r=rows[j];
-        var d=parseDetail(r)||{},di=d.income||{},de=d.expense||{};
+        var v=finRevVals(r);
+        for(i=0;i<15;i++)sums[i]+=parseFloat(v[i])||0;
         var pname=String(r.project_name||'').trim();
         var warn=!pname||doneTimeVal(r)===0;
-        var sI=sumKeys(di,inc),sE=sumKeys(de,exp),pf=effProfit(r);
-        sums[0]+=pf;sums[1]+=sI;sums[6]+=sE;
-        for(i=0;i<inc.length;i++)sums[2+i]+=parseFloat(di[inc[i][0]])||0;
-        for(i=0;i<exp.length;i++)sums[7+i]+=parseFloat(de[exp[i][0]])||0;
         html+='<tr'+(warn?' class="fin-row-warn"':'')+'><td>'+(j+1)+'</td>';
         html+='<td>'+(pname?escHtml(pname):'(未填项目名)')+'</td>';
         html+='<td>'+escHtml(r.region||'-')+'</td><td>'+escHtml(r.company||'-')+'</td><td>'+(r.time?escHtml(r.time):'-')+'</td>';
-        html+='<td>'+pf.toFixed(2)+'</td><td>'+sI.toFixed(2)+'</td>';
-        for(i=0;i<inc.length;i++)html+='<td>'+amt(di[inc[i][0]])+'</td>';
-        html+='<td>'+sE.toFixed(2)+'</td>';
-        for(i=0;i<exp.length;i++)html+='<td>'+amt(de[exp[i][0]])+'</td>';
+        html+='<td>'+v[0].toFixed(2)+'</td><td>'+v[1].toFixed(2)+'</td>';
+        for(i=0;i<incN;i++)html+='<td>'+amt(v[2+i])+'</td>';
+        html+='<td>'+v[6].toFixed(2)+'</td>';
+        for(i=0;i<expN;i++)html+='<td>'+amt(v[7+i])+'</td>';
         html+='<td><button class="loan-action-btn" onclick="showView(\'stats-done\')">✏️ 去修改</button></td></tr>';
       }
       html+='</tbody><tfoot><tr><td>合计</td><td></td><td></td><td></td><td></td>';
@@ -2221,16 +2237,7 @@ document.getElementById(stage+'-save-status').style.display='none';
     renderCosts:function(){
       var tab=FIN_TABS[this._tab],hasGrp=!!tab.groups,rows=[],i,r;
       for(i=0;i<this._cache.costs.length;i++){r=this._cache.costs[i];if(r.cost_type===this._tab)rows.push(r)}
-      rows.sort(function(a,b){
-        // period 字符串降序（finParsePeriod null 排最后）→ group_name → item_name
-        var pa=finParsePeriod(a.period),pb=finParsePeriod(b.period);
-        if(!pa&&pb)return 1;
-        if(pa&&!pb)return -1;
-        if(pa&&pb&&a.period!==b.period)return a.period<b.period?1:-1;
-        var ga=String(a.group_name||''),gb=String(b.group_name||'');
-        if(ga!==gb)return ga<gb?-1:1;
-        return String(a.item_name||'')<String(b.item_name||'')?-1:1;
-      });
+      rows.sort(finCostSort);
       var html='<thead><tr><th>期间</th>'+(hasGrp?'<th id="fin-cost-th-group">'+(this._tab==='fixed'?'公司':'品种')+'</th>':'')+'<th>明细</th><th>金额(元)</th><th>备注</th><th>操作</th></tr></thead><tbody id="fin-cost-tbody">';
       var sum=0;
       if(this._editing==='new')html+=this.finEditRow(null);
@@ -2282,6 +2289,99 @@ document.getElementById(stage+'-save-status').style.display='none';
       }catch(e){
         st.textContent='删除失败';st.style.display='inline';
       }
+    },
+    exportExcel(){
+      // 单文件三段表（规格§5.4 决定#10）：①利润汇总（含追加列，所见即所得）②项目收入明细 ③成本明细（全部页签合并）
+      var agg=finAggregate(this._cache.done,this._cache.costs,this._year,this._loadExtra());
+      var incN=SEG_ITEMS['自营'].income.length,expN=SEG_ITEMS['自营'].expense.length;
+      var i,j;
+      function cell(v,th){
+        var tag=th?'th':'td',st=th?' style="background:#1e3a5f;color:#fff;font-weight:bold"':'';
+        if(typeof v==='number'&&isFinite(v))return'<'+tag+st+'>'+v.toFixed(2)+'</'+tag+'>';// 数字列纯数字不走 xlsText
+        if(v===null||v===undefined||v==='')return'<'+tag+st+'></'+tag+'>';
+        return'<'+tag+st+'>'+(th?escHtml(v):xlsText(v))+'</'+tag+'>';
+      }
+      function table(title,head,rows,foot){
+        var h='<h3>'+title+'</h3><table border="1"><thead><tr>',r,c;
+        for(c=0;c<head.length;c++)h+=cell(head[c],true);
+        h+='</tr></thead><tbody>';
+        for(r=0;r<rows.length;r++){for(c=0;c<rows[r].length;c++)h+=cell(rows[r][c],false);h+='</tr>'}
+        h+='</tbody>';
+        if(foot){h+='<tfoot><tr>';for(c=0;c<foot.length;c++)h+=cell(foot[c],false);h+='</tr></tfoot>'}
+        return h+'</table>';
+      }
+      function num(v){var n=parseFloat(v);return isNaN(n)?'':n}
+      // ① 利润汇总：与 renderSummary 同源（finAggregate + 当前追加列）
+      var head1=[''];
+      for(i=0;i<agg.cols.length;i++)head1.push(agg.cols[i].label);
+      var defs=[['项目收入',agg.income],['成本支出',agg.cost],['其他支出',agg.other],['合计',agg.total]],rows1=[];
+      for(i=0;i<defs.length;i++){
+        var row1=[defs[i][0]];
+        for(j=0;j<agg.cols.length;j++)row1.push(defs[i][1][agg.cols[j].key]);
+        rows1.push(row1);
+      }
+      // ② 项目收入明细：与 renderRevenue 同源同序（finRevRows 已按完成时间降序、finRevVals 同一份 15 值）
+      var rev=finRevRows(this._cache.done),rows2=[],sums=[];
+      for(i=0;i<15;i++)sums.push(0);
+      for(j=0;j<rev.length;j++){
+        var r=rev[j],v=finRevVals(r);
+        for(i=0;i<15;i++)sums[i]+=parseFloat(v[i])||0;
+        var row2=[j+1,String(r.project_name||'').trim()||'(未填项目名)',r.region||'',r.company||'',r.time||'',v[0],v[1]];
+        for(i=0;i<incN;i++)row2.push(num(v[2+i]));
+        row2.push(v[6]);
+        for(i=0;i<expN;i++)row2.push(num(v[7+i]));
+        rows2.push(row2);
+      }
+      var foot2=['合计','','','',''];
+      for(i=0;i<15;i++)foot2.push(sums[i]);
+      // ③ 成本明细：按页签固定顺序合并全部类型，类型内同 renderCosts 排序
+      var tkeys=Object.keys(FIN_TABS),rows3=[];
+      for(i=0;i<tkeys.length;i++){
+        var sub=[];
+        for(j=0;j<this._cache.costs.length;j++){if(this._cache.costs[j].cost_type===tkeys[i])sub.push(this._cache.costs[j])}
+        sub.sort(finCostSort);
+        for(j=0;j<sub.length;j++){
+          var c=sub[j];
+          rows3.push([FIN_TABS[tkeys[i]].label,c.group_name||'',c.item_name||'',c.period||'',parseFloat(c.amount)||0,c.remark||'']);
+        }
+      }
+      var t=new Date(),ds=t.getFullYear()+String(t.getMonth()+1).padStart(2,'0')+String(t.getDate()).padStart(2,'0');
+      var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+      html+='<head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>财务看板</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>';
+      html+=table('利润汇总',head1,rows1,null)+'<br>'+table('项目收入明细',FIN_REV_HEAD,rows2,foot2)+'<br>'+table('成本明细',['类型','分组','明细','期间','金额(元)','备注'],rows3,null);
+      html+='</body></html>';
+      var blob=new Blob(['﻿'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');
+      a.href=url;
+      a.download='财务看板_'+ds+'.xls';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+    exportPDF(){
+      // 照抄 LoanStats.exportPDF 机制：注入 print title、隐藏其他视图与按钮、打印后 500ms 恢复
+      var t=new Date(),ds=t.getFullYear()+String(t.getMonth()+1).padStart(2,'0')+String(t.getDate()).padStart(2,'0');
+      document.title='财务看板_'+ds;
+      var el=document.getElementById('view-stats-finance');
+      var others=['view-home','view-calc','view-quote','view-stats-bid','view-stats-win','view-stats-done','view-stats-loan','view-stats-subsidiary'];
+      var btns=el.querySelectorAll('.btn-action,.loan-action-btn');
+      var printTitle=document.createElement('h2');
+      printTitle.id='print-title-temp';
+      printTitle.textContent='贸易板块利润情况';
+      printTitle.style.cssText='text-align:center;font-size:18px;margin:12px 0 16px;color:#1e3a5f;';
+      el.insertBefore(printTitle,el.firstChild);
+      for(var i=0;i<btns.length;i++)btns[i].style.display='none';
+      for(var i=0;i<others.length;i++){var oe=document.getElementById(others[i]);if(oe)oe.style.display='none'}
+      el.style.display='block';
+      window.print();
+      setTimeout(function(){
+        if(printTitle.parentNode)printTitle.parentNode.removeChild(printTitle);
+        for(var i=0;i<btns.length;i++)btns[i].style.display='';
+        el.style.display='none';
+        document.title='贸易金融业务管理系统（Supabase）';
+      },500);
     }
   };
 
