@@ -783,7 +783,7 @@
   function sbUpdate(id,fields){return fetch(SB_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
   function sbDelete(ids){return fetch(SB_API+'?id=in.('+ids.map(function(x){return encodeURIComponent(x)}).join(',')+')',{method:'DELETE',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}})}
 
-  var BIZ_TYPES=['银承-回报','银承-供应链','信用证-回报','信用证-供应链','跑量/受托支付','存款','时点','商票质押贷款','存单质押贷款','其他'];
+  var BIZ_TYPES=['银承-回报','银承-供应链','信用证-回报','信用证-供应链','跑量/受托支付','存款','时点','商票质押贷款','存单质押贷款','商票融资贴现','其他'];
   function bizTypeOpts(sel){var o='<option value=\"\">选择类型</option>';for(var i=0;i<BIZ_TYPES.length;i++)o+='<option value=\"'+BIZ_TYPES[i]+'\"'+(sel===BIZ_TYPES[i]?' selected':'')+'>'+BIZ_TYPES[i]+'</option>';return o}
   function segmentOpts(sel){var segs=['咨询','自营'];var o='<option value="">选择板块</option>';for(var i=0;i<segs.length;i++)o+='<option value="'+segs[i]+'"'+(sel===segs[i]?' selected':'')+'>'+segs[i]+'</option>';return o}
   var SEG_ITEMS={'咨询':{income:[['service_fee','服务费收入'],['other','其他收入']],expense:[['service_provider','服务商支出'],['other','其他支出']]},'自营':{income:[['service_fee','服务费收入'],['deposit_interest','存款利息收入'],['post_interest','后置利息收入'],['other','其他收入']],expense:[['service_provider','服务商支出'],['discount','贴现/议付支出'],['capital_occupy','资金占用支出'],['guarantee_fee','担保费'],['loan_interest','贷款利息'],['retained_profit','留存利润支出'],['handling_fee','手续费支出'],['other','其他支出']]}};
@@ -1599,7 +1599,42 @@ document.getElementById(stage+'-save-status').style.display='none';
         {key:'p3-2',stage:'p3',no:'⑪',tag:'平账',from:'B',to:'consult',name:'B还款给咨询主体',desc:'B将货款偿还给咨询主体。',actor:'B',docs:[],branch:null},
         {key:'p3-3',stage:'p3',no:'⑫',tag:'平账',from:'consult',to:'A',name:'咨询主体还款给A',desc:'咨询主体再将资金偿还给A。',actor:'咨询主体',docs:[],branch:null},
         {key:'p3-4',stage:'p3',no:'⑬',tag:'平账',from:'A',to:'up',name:'A支付货款给上游',desc:'A最后将资金作为货款支付给上游公司，本业务平账完成。',actor:'A',docs:[],branch:null}
-      ]}
+      ]},
+    'city-cp-discount':{title:'城投商票融资贴现业务',icon:'🎫',linkedBizTypes:['商票融资贴现'],
+      legend:{
+        parties:[
+          ['A','我司贸易公司A：主贸易环节的第一主体，主要用于进行商票贴现'],
+          ['B','我司贸易公司B：主贸易环节的第二主体，主要用于取得城投公司背书的商票'],
+          ['上','主贸易环节（A→B）的上游公司'],
+          ['下','主贸易环节（A→B）的下游公司，以现金、票据、贷款资金方式进行货款支付'],
+          ['银行','贴现环节的贴现行，完成商票贴现'],
+          ['资金方','提供拆借资金，完成资金过账'],
+          ['城投','商票的出票人及承兑人']
+        ],
+        chains:[
+          '主贸易环节（货物流转）：上游公司 → A → B → 下游公司',
+          '商票买断环节：A → 城投 → B → A（A与城投签署《商票融资协议书》并支付商票本金款；城投收款后开具等额商票，背书给接票人B，B再背书给A）',
+          '贴现环节：A → 银行（A将买断环节取得的商票直接在银行贴现）'
+        ],
+        essence:'本业务实质：城投公司通过开具商票取得一笔等额融资本金，并对应向A支付一笔融资成本；A经买断环节取得商票后在银行贴现，以贴现款偿还资金方完成资金闭环。'
+      },
+      stages:{
+        p1:{title:'阶段一 · 买断与贴现',note:'触发：银行完成商票贴现业务审核后启动实施'}
+      },
+      nodeNames:{up:'上游',down:'下游',A:'A',B:'B',bank:'银行',chengtou:'城投',funder:'资金方'},
+      layouts:{
+        p1:{nodes:{bank:[200,40],chengtou:[560,40],up:[40,200],A:[200,200],B:[430,200],down:[700,200],funder:[200,340]},context:[['up','A','货'],['A','B','货'],['B','down','货']]}
+      },
+      groupNote:'平账环节：B仅代A接收商票，④背书给A后《商票融资协议书》自动平账；A于⑦补齐缺口偿还资金方，完成资金平账',
+      steps:[
+        {key:'p1-1',stage:'p1',no:'①',from:'funder',to:'A',name:'资金方拆借资金给A',desc:'资金方提供资金，以拆借款方式支付给A，启动整个交易框架。',actor:'资金方',docs:[],branch:null},
+        {key:'p1-2',stage:'p1',no:'②',from:'A',to:'chengtou',name:'A支付商票融资款给城投',desc:'A与城投公司签署《商票融资协议书》，并将资金以商票融资款（商票本金款）划付至城投。',actor:'A',docs:['商票融资协议书'],branch:null},
+        {key:'p1-3',stage:'p1',no:'③',from:'chengtou',to:'B',name:'城投开具等额商票背书给B',desc:'城投收款后开具一张等额商票，背书给《商票融资协议书》中的接票人B。',actor:'城投公司',docs:[],branch:null},
+        {key:'p1-4',stage:'p1',no:'④',from:'B',to:'A',name:'B将商票背书给A',desc:'鉴于B实际是代A接收商票，取得商票后直接将商票背书给A；按《商票融资协议书》，B背书给A后自动完成协议平账。',actor:'B',docs:[],branch:null},
+        {key:'p1-5',stage:'p1',no:'⑤',from:'A',to:'bank',name:'A将商票背书给银行贴现',desc:'A取得商票后，将该商票背书给银行，申请完成贴现。',actor:'A',docs:[],branch:null},
+        {key:'p1-6',stage:'p1',no:'⑥',from:'bank',to:'A',name:'银行支付贴现款给A',desc:'银行完成商票贴现业务审核后，扣除贴现息，将剩余贴现款支付给A。',actor:'银行',docs:[],branch:null},
+        {key:'p1-7',stage:'p1',no:'⑦',tag:'平账',from:'A',to:'funder',name:'A偿还资金方完成平账',desc:'A取得贴现款并补齐缺口后，将资金偿还给资金方，完成平账。',actor:'A',docs:[],branch:null}
+      ]},
   };
 
   var Guide={
