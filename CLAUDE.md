@@ -67,6 +67,11 @@ finGetAll()        // GET  finance_costs?order=id.asc
 finInsert(records) // POST finance_costs（Prefer: return=representation）
 finUpdate(id,fields)// PATCH finance_costs?id=eq.{id}
 finDelete(ids)     // DELETE finance_costs?id=in.({ids})（单个 id 或数组）
+
+invGetAll()        // GET  self_invoices?order=id.asc
+invInsert(records) // POST self_invoices（Prefer: return=representation）
+invUpdate(id,fields)// PATCH self_invoices?id=eq.{id}
+invDelete(id)      // DELETE self_invoices?id=eq.{id}
 ```
 
 ### 飞书推送
@@ -88,6 +93,7 @@ finDelete(ids)     // DELETE finance_costs?id=in.({ids})（单个 id 或数组�
 
 💹 财务板块（max-width: 1008px，每行3张；后续财务类模块新增到此标题下）
   └── 💹 财务看板（有前端密码门，不推送飞书日报）
+  └── 🧾 自营发票统计（上传模版自动入库 / 筛选 / 导出Excel，不推送飞书日报）
 ```
 
 - 卡片容器：`.home-cards`，`justify-content: flex-start`，`max-width: 1008px`
@@ -127,6 +133,14 @@ finDelete(ids)     // DELETE finance_costs?id=in.({ids})（单个 id 或数组�
 - `FinanceStats.renderTabs()` / `setTab(t)` / `renderCosts()` — ③成本录入四页签（FIN_TABS：fixed/chain/reimburse/other）
 - `FinanceStats.addRecord()` / `startEdit(id)` / `saveEdit(id)` / `cancelEdit()` / `deleteRecord(id)` — 成本行内 CRUD（期间选择器仅 全年/月 两档；历史季度记录编辑回显全年、保存转年粒度）
 - `FinanceStats.exportExcel()` / `exportPDF()` — 导出：Excel 单文件三段表（汇总含追加列所见即所得＋收入明细 20 列＋成本明细全页签合并，xlsText 防注入＋BOM）；PDF 打印注入标题「贸易板块利润情况」
+
+### `InvoiceStats` 对象（自营发票统计）
+- `InvoiceStats.render()` — 拉 self_invoices → 筛选 → 排序（period desc、同月 id desc）→ 渲染表格＋合计行（当前筛选之和）＋筛选下拉选项
+- `InvoiceStats.onFile(evt)` — 懒加载 SheetJS CDN（仅上传时注入 script）→ `_parseWorkbook(wb)` 按表头文字定位模版 6 标黄列（开票日期→'YYYY-MM'、空发票号行跳过、金额归一 number）→ 按 invoice_no upsert（覆盖更新但保留 used）→ alert 新增/更新条数
+- `InvoiceStats.addRecord()` / `startEdit(id)` / `saveEdit(id)` / `cancelEdit()` / `deleteRecord(id)` — 行内 CRUD（period 用 month 选择器、amount number、used 勾选）
+- `InvoiceStats.toggleUsed(id,checked)` — 「是否使用」勾选即时 PATCH；勾选行红 loan-row-red / 未勾选绿 loan-row-green
+- `InvoiceStats.setFilter(k,v)` / `clearFilters()` — 筛选：销方/购买方/货物下拉（distinct）、是否使用 是/否/全部、开票年月 from~to 范围（任端留空＝不限）
+- `InvoiceStats.exportExcel()` — 当前筛选所见即所得导出（含合计行、是否使用→是/否、xlsText 防注入＋BOM），文件名 `自营发票统计_YYYYMMDD.xls`；不做 PDF
 
 ## 行着色规则（贷款统计）
 - 🟢 `#c6f6d5`（绿色）：距到期日 > 2 个月
@@ -233,3 +247,27 @@ CREATE POLICY "允许匿名删除" ON finance_costs FOR DELETE TO anon USING (tr
 ```
 
 单位与粒度约定：成本按**元**录入存储，财务看板汇总自动 ÷10000 转万元（2位小数）；收入侧 profit_detail 本身即万元。2026 年 10 月起按月录入（用户 2026-11-19 拍板），历史季度记录（2026-Q1/Q2/Q4）保留照常显示，编辑时只能改成年/月粒度。
+
+## Supabase 建表参考（self_invoices）
+
+```sql
+CREATE TABLE self_invoices (
+  id BIGSERIAL PRIMARY KEY,
+  invoice_no TEXT NOT NULL DEFAULT '',   -- 数电发票号码
+  seller TEXT NOT NULL DEFAULT '',       -- 销方名称
+  buyer TEXT NOT NULL DEFAULT '',        -- 购买方名称
+  period TEXT NOT NULL DEFAULT '',       -- 开票年月 'YYYY-MM'
+  goods TEXT NOT NULL DEFAULT '',        -- 货物或应税劳务名称
+  amount NUMERIC NOT NULL DEFAULT 0,     -- 价税合计（元）
+  used BOOLEAN NOT NULL DEFAULT false,   -- 是否使用
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE self_invoices ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "允许匿名读取" ON self_invoices FOR SELECT TO anon USING (true);
+CREATE POLICY "允许匿名插入" ON self_invoices FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "允许匿名更新" ON self_invoices FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "允许匿名删除" ON self_invoices FOR DELETE TO anon USING (true);
+```
+
+发票模版：`财务看板资料\全量发票查询导出结果.xlsx`（首工作表、表头第 1 行、6 个标黄列）；解析按**表头文字**定位列（不依赖列序），扫描全部工作表找含"数电发票号码"表头者。

@@ -92,6 +92,7 @@
   .home-card.card-stats-finance { border-top-color: #6b46c1; }
   .home-card.card-errorlog { border-top-color: #c53030; }
   .home-card.card-guide { border-top-color: #319795; }
+  .home-card.card-invoice { border-top-color: #b7791f; }
   .home-card .icon { font-size: 48px; margin-bottom: 16px; }
   .home-card h2 { font-size: 18px; color: #2d3748; margin-bottom: 8px; }
   .home-card p  { font-size: 13px; color: #718096; line-height: 1.6; }
@@ -269,8 +270,31 @@
   <div class="home-container">
     <div class="home-cards">
       <div class="home-card card-stats-finance" onclick="FinanceStats.cardClick()"><div class="icon">💹</div><h2>财务看板</h2><p>自营板块利润 · 成本汇总统计</p></div>
+      <div class="home-card card-invoice" onclick="showView('invoice')"><div class="icon">🧾</div><h2>自营发票统计</h2><p>上传模版自动入库 / 筛选 / 导出Excel</p></div>
     </div>
   </div>
+</div>
+<!-- ====== 视图：自营发票统计 ====== -->
+<div id="view-invoice" style="display:none;">
+  <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>🧾 自营发票统计</h1><p>自营公司开具发票 · 上传模版自动入库 · 筛选与导出</p></div></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0">
+    <label style="padding:7px 16px;border:1px solid #90cdf4;background:#ebf8ff;color:#2c5282;border-radius:6px;font-size:13px;cursor:pointer">📤 上传发票模版(.xlsx)<input type="file" id="invoice-file" accept=".xlsx" style="display:none" onchange="InvoiceStats.onFile(event)"></label>
+    <button onclick="InvoiceStats.addRecord()" style="padding:7px 16px;border:1px solid #9ae6b4;background:#f0fff4;color:#22543d;border-radius:6px;font-size:13px;cursor:pointer">＋ 新增</button>
+    <button onclick="InvoiceStats.exportExcel()" style="padding:7px 16px;border:1px solid #f6ad55;background:#fffaf0;color:#7b341e;border-radius:6px;font-size:13px;cursor:pointer">📤 导出Excel</button>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;font-size:13px;color:#4a5568">
+    <select id="inv-f-seller" onchange="InvoiceStats.setFilter('seller',this.value)"></select>
+    <select id="inv-f-buyer" onchange="InvoiceStats.setFilter('buyer',this.value)"></select>
+    <select id="inv-f-goods" onchange="InvoiceStats.setFilter('goods',this.value)"></select>
+    <select id="inv-f-used" onchange="InvoiceStats.setFilter('used',this.value)"><option value="">是否使用:全部</option><option value="1">是</option><option value="0">否</option></select>
+    <span>开票年月</span>
+    <input type="month" id="inv-f-from" onchange="InvoiceStats.setFilter('from',this.value)">
+    <span>~</span>
+    <input type="month" id="inv-f-to" onchange="InvoiceStats.setFilter('to',this.value)">
+    <button onclick="InvoiceStats.clearFilters()" style="padding:4px 12px;border:1px solid #e2e8f0;background:#fff;border-radius:6px;font-size:12px;cursor:pointer">清空筛选</button>
+  </div>
+  <div class="stats-table-wrapper"><table class="stats-table" id="invoice-table"><thead><tr><th>数电发票号码</th><th>销方名称</th><th>购买方名称</th><th>开票年月</th><th>货物或应税劳务名称</th><th>价税合计</th><th>是否使用</th><th style="width:90px">操作</th></tr></thead><tbody id="invoice-tbody"></tbody></table></div>
+  <div id="invoice-total" style="text-align:right;margin:10px 4px;font-size:14px;font-weight:700;color:#1e3a5f"></div>
 </div>
 <!-- ====== 套利计算器（汇票+信用证共享） ====== -->
 <div id="view-calc" style="display:none;">
@@ -713,7 +737,7 @@
   function fmtPct(v){return v.toFixed(3)+'%';}
 
   window.showView=function(view){
-    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done'),loan:document.getElementById('view-stats-loan'),subsidiary:document.getElementById('view-stats-subsidiary'),finance:document.getElementById('view-stats-finance'),errorlog:document.getElementById('view-errorlog'),guide:document.getElementById('view-guide'),guideDetail:document.getElementById('view-guide-detail')};
+    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done'),loan:document.getElementById('view-stats-loan'),subsidiary:document.getElementById('view-stats-subsidiary'),finance:document.getElementById('view-stats-finance'),errorlog:document.getElementById('view-errorlog'),guide:document.getElementById('view-guide'),guideDetail:document.getElementById('view-guide-detail'),invoice:document.getElementById('view-invoice')};
     Object.values(els).forEach(function(e){if(e)e.style.display='none';});
     if(view==='home'){saveInputs(currentCalcType);els.home.style.display='block';}
     else if(view==='bill'||view==='lc'){saveInputs(currentCalcType);currentCalcType=view;applyLabels(view);restoreInputs(view);els.calc.style.display='block';recalc();}
@@ -727,6 +751,7 @@
     else if(view==='errorlog'){if(els.errorlog){els.errorlog.style.display='block';ErrorLogStats.render();}}
     else if(view==='guide'){if(els.guide){els.guide.style.display='block';Guide.renderList();}}
     else if(view==='guide-detail'){if(els.guideDetail){els.guideDetail.style.display='block';Guide.renderDetail();}}
+    else if(view==='invoice'){if(els.invoice){els.invoice.style.display='block';InvoiceStats.render();}}
   };
 
   function saveInputs(type){var s={};allInputs.forEach(function(el){s[el.id]=el.value;});inputState[type]=s;}
@@ -2569,6 +2594,250 @@ document.getElementById(stage+'-save-status').style.display='none';
   // ===== 初始化 =====
   allInputs.forEach(function(input){input.addEventListener('input',recalc);});
   qAllInputs.forEach(function(input){input.addEventListener('input',recalcQuote);});
+  // ===== Supabase 自营发票统计 CRUD =====
+  var INV_API='https://jpcjwhyotcrhxstzwzid.supabase.co/rest/v1/self_invoices';
+  var INV_KEY=SB_KEY;
+  function invGetAll(){return fetch(INV_API+'?order=id.asc',{headers:{apikey:INV_KEY,Authorization:'Bearer '+INV_KEY}}).then(function(r){return r.json()})}
+  function invInsert(records){return fetch(INV_API,{method:'POST',headers:{apikey:INV_KEY,Authorization:'Bearer '+INV_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(records)}).then(function(r){return r.json()})}
+  function invUpdate(id,fields){return fetch(INV_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:INV_KEY,Authorization:'Bearer '+INV_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
+  function invDelete(id){return fetch(INV_API+'?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{apikey:INV_KEY,Authorization:'Bearer '+INV_KEY}})}
+
+  // ===== 自营发票统计 =====
+  var InvoiceStats={
+    _rows:[],_f:{seller:'',buyer:'',goods:'',used:'',from:'',to:''},_editing:null,
+
+    async render(){
+      try{this._rows=await invGetAll()||[]}catch(e){this._rows=[]}
+      var list=this._filtered(),h='';
+      if(this._editing){
+        var inList=false,er=null;
+        for(var q=0;q<list.length;q++){if(list[q].id===this._editing){inList=true;break}}
+        if(!inList){for(var w2=0;w2<this._rows.length;w2++){if(this._rows[w2].id===this._editing){er=this._rows[w2];break}}}
+        if(er)list=[er].concat(list);
+      }
+      if(this._rows.length===0){
+        h='<tr><td colspan="8" style="text-align:center;color:#a0aec0;padding:24px">暂无发票记录，点「📤 上传发票模版」或「＋ 新增」开始</td></tr>';
+      }else if(list.length===0){
+        h='<tr><td colspan="8" style="text-align:center;color:#a0aec0;padding:24px">无符合筛选条件的记录</td></tr>';
+      }else{
+        for(var i=0;i<list.length;i++){var r=list[i];
+          if(this._editing===r.id){h+=this._editRowHtml(r);continue}
+          h+='<tr class="'+(r.used?'loan-row-red':'loan-row-green')+'">'
+            +'<td>'+escHtml(r.invoice_no)+'</td><td>'+escHtml(r.seller)+'</td><td>'+escHtml(r.buyer)+'</td><td>'+escHtml(r.period)+'</td><td>'+escHtml(r.goods)+'</td>'
+            +'<td style="text-align:right">'+fmtMoney(Number(r.amount)||0)+'</td>'
+            +'<td style="text-align:center"><input type="checkbox" '+(r.used?'checked':'')+' onchange="InvoiceStats.toggleUsed('+r.id+',this.checked)"></td>'
+            +'<td style="text-align:center">'+this._opsHtml(r)+'</td></tr>';
+        }
+      }
+      document.getElementById('invoice-tbody').innerHTML=h;
+      var sum=0;for(var j=0;j<list.length;j++)sum+=Number(list[j].amount)||0;
+      document.getElementById('invoice-total').textContent='合计（当前筛选 '+list.length+' 条）：'+fmtMoney(sum);
+      this._renderFilterOpts();
+    },
+
+    _opsHtml(r){
+      if(this._editing===r.id){
+        return '<button onclick="InvoiceStats.saveEdit('+r.id+')" style="padding:3px 10px;border:1px solid #90cdf4;background:#ebf8ff;color:#2c5282;border-radius:5px;font-size:12px;cursor:pointer">💾 保存</button> '
+             +'<button onclick="InvoiceStats.cancelEdit()" style="padding:3px 10px;border:1px solid #e2e8f0;background:#fff;border-radius:5px;font-size:12px;cursor:pointer">✕ 取消</button>';
+      }
+      return '<button onclick="InvoiceStats.startEdit('+r.id+')" style="padding:3px 8px;border:1px solid #e2e8f0;background:#fff;border-radius:5px;font-size:12px;cursor:pointer" title="编辑">✎</button> '
+           +'<button onclick="InvoiceStats.deleteRecord('+r.id+')" style="padding:3px 8px;border:1px solid #fed7d7;background:#fff5f5;border-radius:5px;font-size:12px;cursor:pointer" title="删除">🗑</button>';
+    },
+
+    _editRowHtml(r){
+      function inp(id,val,extra){return '<input id="inv-edit-'+id+'" value="'+escHtml(val==null?'':val)+'" '+(extra||'')+' style="width:100%;padding:4px 6px;border:1px solid #cbd5e0;border-radius:4px;font-size:12px">'}
+      return '<tr class="inv-edit-row" style="background:#fffaf0">'
+        +'<td>'+inp('invoice_no',r.invoice_no)+'</td>'
+        +'<td>'+inp('seller',r.seller)+'</td>'
+        +'<td>'+inp('buyer',r.buyer)+'</td>'
+        +'<td>'+inp('period',r.period,'type="month"')+'</td>'
+        +'<td>'+inp('goods',r.goods)+'</td>'
+        +'<td>'+inp('amount',r.amount,'type="number" step="0.01"')+'</td>'
+        +'<td style="text-align:center"><input id="inv-edit-used" type="checkbox" '+(r.used?'checked':'')+'></td>'
+        +'<td style="text-align:center">'+this._opsHtml(r)+'</td></tr>';
+    },
+
+    async addRecord(){
+      var res=[];
+      try{res=await invInsert([{invoice_no:'',seller:'',buyer:'',period:'',goods:'',amount:0,used:false}])||[]}catch(e){res=[]}
+      var row=Array.isArray(res)?res[0]:res;
+      if(!row||!row.id){alert('新增失败：请检查网络后重试');return}
+      this._editing=row.id;
+      await this.render();
+    },
+
+    startEdit(id){this._editing=id;this.render();},
+
+    cancelEdit(){this._editing=null;this.render();},
+
+    async saveEdit(id){
+      var g=function(k){var el=document.getElementById('inv-edit-'+k);return el?el.value:''};
+      var fields={
+        invoice_no:g('invoice_no'),seller:g('seller'),buyer:g('buyer'),period:g('period'),goods:g('goods'),
+        amount:Number(g('amount'))||0,
+        used:!!(document.getElementById('inv-edit-used')&&document.getElementById('inv-edit-used').checked)
+      };
+      await invUpdate(id,fields);
+      this._editing=null;
+      await this.render();
+    },
+
+    async deleteRecord(id){
+      if(!confirm('确认删除该条发票记录？删除后同事端也将不可见。'))return;
+      await invDelete(id);
+      if(this._editing===id)this._editing=null;
+      await this.render();
+    },
+
+    async toggleUsed(id,checked){
+      await invUpdate(id,{used:!!checked});
+      await this.render();
+    },
+
+    exportExcel(){
+      // 当前筛选结果所见即所得（含合计行）；是否使用导出为 是/否；xlsText 防注入＋BOM 防乱码
+      var list=this._filtered();
+      var head=['数电发票号码','销方名称','购买方名称','开票年月','货物或应税劳务名称','价税合计','是否使用'];
+      var h='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">'
+        +'<head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>自营发票统计</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>'
+        +'<table border="1"><tr>';
+      for(var i=0;i<head.length;i++)h+='<th>'+xlsText(head[i])+'</th>';
+      h+='</tr>';
+      var sum=0;
+      for(var j=0;j<list.length;j++){
+        var r=list[j];sum+=Number(r.amount)||0;
+        h+='<tr><td>'+xlsText(r.invoice_no)+'</td><td>'+xlsText(r.seller)+'</td><td>'+xlsText(r.buyer)+'</td><td>'+xlsText(r.period)+'</td><td>'+xlsText(r.goods)+'</td><td>'+xlsText(String(Number(r.amount)||0))+'</td><td>'+xlsText(r.used?'是':'否')+'</td></tr>';
+      }
+      h+='<tr><td>'+xlsText('合计')+'</td><td></td><td></td><td></td><td></td><td>'+xlsText(String(sum))+'</td><td></td></tr>';
+      h+='</table></body></html>';
+      var d=new Date(),ds=''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+      var blob=new Blob([String.fromCharCode(0xfeff)+h],{type:'application/vnd.ms-excel'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='自营发票统计_'+ds+'.xls';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){URL.revokeObjectURL(a.href)},500);
+    },
+
+    _ensureXLSX(){
+      if(window.XLSX)return Promise.resolve(window.XLSX);
+      if(this._xlsxLoading)return this._xlsxLoading;
+      this._xlsxLoading=new Promise(function(res,rej){
+        var s=document.createElement('script');
+        s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+        s.onload=function(){res(window.XLSX)};
+        s.onerror=function(){rej(new Error('xlsx load failed'))};
+        document.head.appendChild(s);
+      });
+      return this._xlsxLoading;
+    },
+
+    async onFile(evt){
+      var f=evt&&evt.target&&evt.target.files&&evt.target.files[0];
+      if(!f)return;
+      var X;
+      try{X=await this._ensureXLSX()}catch(e){alert('解析库加载失败：请检查网络后重试');return}
+      var buf=await f.arrayBuffer();
+      var wb=X.read(buf,{type:'array'});
+      var recs=this._parseWorkbook(wb);
+      if(!recs.length){alert('模版中未抓到有效发票行：请确认使用财务「全量发票查询导出结果」模版');return}
+      var cur=[];try{cur=await invGetAll()||[]}catch(e){cur=[]}
+      var adds=[],ups=[];
+      for(var i=0;i<recs.length;i++){
+        var ex=null;
+        for(var k=0;k<cur.length;k++){if(cur[k].invoice_no===recs[i].invoice_no){ex=cur[k];break}}
+        if(ex)ups.push([ex.id,recs[i]]);else adds.push(recs[i]);
+      }
+      if(adds.length)await invInsert(adds);
+      for(var u=0;u<ups.length;u++){
+        var r=ups[u][1];
+        await invUpdate(ups[u][0],{seller:r.seller,buyer:r.buyer,period:r.period,goods:r.goods,amount:r.amount});
+      }
+      alert('上传完成：新增 '+adds.length+' 条、更新 '+ups.length+' 条（发票号重复者按模版覆盖，勾选状态保留）');
+      if(evt.target)evt.target.value='';
+      await this.render();
+    },
+
+    _parseWorkbook(wb){
+      var names=['数电发票号码','销方名称','购买方名称','开票日期','货物或应税劳务名称','价税合计'];
+      var sheets=(wb&&wb.SheetNames)||[];
+      for(var si=0;si<sheets.length;si++){
+        var ws=wb.Sheets[sheets[si]];
+        var matrix=window.XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(!matrix||!matrix.length)continue;
+        var col={},hr=-1;
+        for(var r=0;r<Math.min(matrix.length,5);r++){
+          var found={};
+          for(var c=0;c<matrix[r].length;c++){
+            var hv=String(matrix[r][c]==null?'':matrix[r][c]).trim();
+            if(names.indexOf(hv)>-1)found[hv]=c;
+          }
+          if(found['数电发票号码']!==undefined){col=found;hr=r;break}
+        }
+        if(hr<0)continue;
+        var out=[];
+        for(var ri=hr+1;ri<matrix.length;ri++){
+          var mr=matrix[ri];
+          var no=String(mr[col['数电发票号码']]==null?'':mr[col['数电发票号码']]).trim();
+          if(!no)continue;
+          var dv=mr[col['开票日期']],period='';
+          if(dv&&typeof dv==='object'&&dv.getFullYear){
+            period=dv.getFullYear()+'-'+String(dv.getMonth()+1).padStart(2,'0');
+          }else{
+            var mm=String(dv==null?'':dv).match(/^(\d{4})-(\d{1,2})/);
+            if(mm)period=mm[1]+'-'+mm[2].padStart(2,'0');
+          }
+          var amt=Number(mr[col['价税合计']]);if(!isFinite(amt))amt=0;
+          out.push({invoice_no:no,seller:String(mr[col['销方名称']]==null?'':mr[col['销方名称']]).trim(),buyer:String(mr[col['购买方名称']]==null?'':mr[col['购买方名称']]).trim(),period:period,goods:String(mr[col['货物或应税劳务名称']]==null?'':mr[col['货物或应税劳务名称']]).trim(),amount:amt,used:false});
+        }
+        if(out.length)return out;
+      }
+      return [];
+    },
+
+    _filtered(){
+      var f=this._f;
+      var out=this._rows.filter(function(r){
+        if(f.seller&&r.seller!==f.seller)return false;
+        if(f.buyer&&r.buyer!==f.buyer)return false;
+        if(f.goods&&r.goods!==f.goods)return false;
+        if(f.used==='1'&&!r.used)return false;
+        if(f.used==='0'&&r.used)return false;
+        if(f.from&&(r.period||'')<f.from)return false;
+        if(f.to&&(r.period||'')>f.to)return false;
+        return true;
+      });
+      out.sort(function(a,b){if(a.period<b.period)return 1;if(a.period>b.period)return -1;return b.id-a.id;});
+      return out;
+    },
+
+    setFilter(k,v){this._f[k]=v;this.render();},
+
+    clearFilters(){
+      this._f={seller:'',buyer:'',goods:'',used:'',from:'',to:''};
+      this.render();
+    },
+
+    _renderFilterOpts(){
+      var self=this;
+      function distinct(key){var seen=[],out=[];for(var i=0;i<self._rows.length;i++){var v=self._rows[i][key];if(v&&seen.indexOf(v)<0){seen.push(v);out.push(v)}}return out.sort()}
+      function opts(id,label,vals,cur){
+        var el=document.getElementById(id);if(!el)return;
+        var h='<option value="">'+label+':全部</option>';
+        for(var i=0;i<vals.length;i++)h+='<option value="'+escHtml(vals[i])+'"'+(vals[i]===cur?' selected':'')+'>'+escHtml(vals[i])+'</option>';
+        el.innerHTML=h;
+      }
+      opts('inv-f-seller','销方',distinct('seller'),this._f.seller);
+      opts('inv-f-buyer','购买方',distinct('buyer'),this._f.buyer);
+      opts('inv-f-goods','货物',distinct('goods'),this._f.goods);
+      var u=document.getElementById('inv-f-used');if(u)u.value=this._f.used;
+      var ff=document.getElementById('inv-f-from');if(ff)ff.value=this._f.from;
+      var ft=document.getElementById('inv-f-to');if(ft)ft.value=this._f.to;
+    }
+  };
+
   window.Stats = Stats;
   window.LoanStats = LoanStats;
   window.SubsidiaryStats = SubsidiaryStats;
@@ -2576,6 +2845,7 @@ document.getElementById(stage+'-save-status').style.display='none';
   window.ErrorLogStats = ErrorLogStats;
   window.Guide = Guide;
   window.GUIDE_DATA = GUIDE_DATA;
+  window.InvoiceStats = InvoiceStats;
   if(qElType)qElType.addEventListener('change',recalcQuote);
   applyLabels('bill');
   showView('home');
