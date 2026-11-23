@@ -2708,7 +2708,7 @@ document.getElementById(stage+'-save-status').style.display='none';
         var r=list[j];sum+=Number(r.amount)||0;
         h+='<tr><td>'+xlsText(r.invoice_no)+'</td><td>'+xlsText(r.seller)+'</td><td>'+xlsText(r.buyer)+'</td><td>'+xlsText(r.period)+'</td><td>'+xlsText(r.goods)+'</td><td>'+xlsText(String(Number(r.amount)||0))+'</td><td>'+xlsText(r.used?'是':'否')+'</td></tr>';
       }
-      h+='<tr><td>'+xlsText('合计')+'</td><td></td><td></td><td></td><td></td><td>'+xlsText(String(sum))+'</td><td></td></tr>';
+      h+='<tr><td>'+xlsText('合计')+'</td><td></td><td></td><td></td><td></td><td>'+xlsText(sum.toFixed(2))+'</td><td></td></tr>';
       h+='</table></body></html>';
       var d=new Date(),ds=''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
       var blob=new Blob([String.fromCharCode(0xfeff)+h],{type:'application/vnd.ms-excel'});
@@ -2724,11 +2724,14 @@ document.getElementById(stage+'-save-status').style.display='none';
     _ensureXLSX(){
       if(window.XLSX)return Promise.resolve(window.XLSX);
       if(this._xlsxLoading)return this._xlsxLoading;
+      var self=this;
       this._xlsxLoading=new Promise(function(res,rej){
         var s=document.createElement('script');
         s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+        s.setAttribute('integrity','sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT');
+        s.setAttribute('crossorigin','anonymous');
         s.onload=function(){res(window.XLSX)};
-        s.onerror=function(){rej(new Error('xlsx load failed'))};
+        s.onerror=function(){self._xlsxLoading=null;rej(new Error('xlsx load failed'))};
         document.head.appendChild(s);
       });
       return this._xlsxLoading;
@@ -2739,11 +2742,15 @@ document.getElementById(stage+'-save-status').style.display='none';
       if(!f)return;
       var X;
       try{X=await this._ensureXLSX()}catch(e){alert('解析库加载失败：请检查网络后重试');return}
-      var buf=await f.arrayBuffer();
-      var wb=X.read(buf,{type:'array'});
+      var wb;
+      try{var buf=await f.arrayBuffer();wb=X.read(buf,{type:'array'})}catch(e){alert('文件解析失败：请确认选择的是 .xlsx 模版文件（若是请重新导出后再试）');if(evt.target)evt.target.value='';return}
       var recs=this._parseWorkbook(wb);
-      if(!recs.length){alert('模版中未抓到有效发票行：请确认使用财务「全量发票查询导出结果」模版');return}
-      var cur=[];try{cur=await invGetAll()||[]}catch(e){cur=[]}
+      if(!recs.length){alert('模版中未抓到有效发票行：请确认使用财务「全量发票查询导出结果」模版');if(evt.target)evt.target.value='';return}
+      var cur=null;try{cur=await invGetAll()}catch(e){cur=null}
+      if(!Array.isArray(cur)){alert('读取现有发票失败：请检查网络后重试（本次上传已中止，未写入任何数据）');if(evt.target)evt.target.value='';return}
+      var dedup={},order=[];
+      for(var d=0;d<recs.length;d++){if(dedup[recs[d].invoice_no]===undefined)order.push(recs[d].invoice_no);dedup[recs[d].invoice_no]=recs[d]}
+      recs=order.map(function(kk){return dedup[kk]});
       var adds=[],ups=[];
       for(var i=0;i<recs.length;i++){
         var ex=null;
@@ -2755,13 +2762,14 @@ document.getElementById(stage+'-save-status').style.display='none';
         var r=ups[u][1];
         await invUpdate(ups[u][0],{seller:r.seller,buyer:r.buyer,period:r.period,goods:r.goods,amount:r.amount});
       }
-      alert('上传完成：新增 '+adds.length+' 条、更新 '+ups.length+' 条（发票号重复者按模版覆盖，勾选状态保留）');
+      alert('上传完成：新增 '+adds.length+' 条、更新 '+ups.length+' 条'+(this._lastSkipped?'、跳过 '+this._lastSkipped+' 条（无有效发票号或开票日期）':'')+'（发票号重复者按模版覆盖，勾选状态保留）');
       if(evt.target)evt.target.value='';
       await this.render();
     },
 
     _parseWorkbook(wb){
       var names=['数电发票号码','销方名称','购买方名称','开票日期','货物或应税劳务名称','价税合计'];
+      this._lastSkipped=0;
       var sheets=(wb&&wb.SheetNames)||[];
       for(var si=0;si<sheets.length;si++){
         var ws=wb.Sheets[sheets[si]];
@@ -2789,6 +2797,7 @@ document.getElementById(stage+'-save-status').style.display='none';
             var mm=String(dv==null?'':dv).match(/^(\d{4})-(\d{1,2})/);
             if(mm)period=mm[1]+'-'+mm[2].padStart(2,'0');
           }
+          if(!period){this._lastSkipped=(this._lastSkipped||0)+1;continue}
           var amt=Number(mr[col['价税合计']]);if(!isFinite(amt))amt=0;
           out.push({invoice_no:no,seller:String(mr[col['销方名称']]==null?'':mr[col['销方名称']]).trim(),buyer:String(mr[col['购买方名称']]==null?'':mr[col['购买方名称']]).trim(),period:period,goods:String(mr[col['货物或应税劳务名称']]==null?'':mr[col['货物或应税劳务名称']]).trim(),amount:amt,used:false});
         }
