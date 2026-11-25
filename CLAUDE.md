@@ -136,9 +136,9 @@ invDelete(id)      // DELETE self_invoices?id=eq.{id}
 
 ### `InvoiceStats` 对象（自营发票统计）
 - `InvoiceStats.render()` — 拉 self_invoices → 筛选 → 排序（period desc、同月 id desc）→ 渲染表格＋合计行（当前筛选之和）＋筛选下拉选项
-- `InvoiceStats.onFile(evt)` — 懒加载 SheetJS CDN（仅上传时注入 script）→ `_parseWorkbook(wb)` 按表头文字定位模版 6 标黄列（开票日期→'YYYY-MM'、空发票号行跳过、金额归一 number）→ 按 invoice_no upsert（覆盖更新但保留 used）→ alert 新增/更新条数
+- `InvoiceStats.onFile(evt)` — 懒加载 SheetJS CDN（仅上传时注入 script，带 SRI sha384）→ `_parseWorkbook(wb)` 按表头文字定位模版 6 标黄列（开票日期→'YYYY-MM'、空发票号/空开票日期行跳过、金额归一 number；一行科目＝一条记录、同票多科目行全保留）→ **行级入库规则**：同发票号+同科目+同价税合计＝DELETE 原行＋INSERT 覆盖（used 保留）；不匹配的原记录保留不动、模版行作新行插入 → alert 新增/覆盖/跳过条数
 - `InvoiceStats.addRecord()` / `startEdit(id)` / `saveEdit(id)` / `cancelEdit()` / `deleteRecord(id)` — 行内 CRUD（period 用 month 选择器、amount number、used 勾选）
-- `InvoiceStats.toggleUsed(id,checked)` — 「是否使用」勾选即时 PATCH；勾选行红 loan-row-red / 未勾选绿 loan-row-green
+- `InvoiceStats.toggleUsed(id,checked)` — 「是否使用」勾选即时 PATCH，**按发票号联动**（同 invoice_no 所有行一起勾/取消）；勾选行红 loan-row-red / 未勾选绿 loan-row-green
 - `InvoiceStats.setFilter(k,v)` / `clearFilters()` — 筛选：销方/购买方/货物下拉（distinct）、是否使用 是/否/全部、开票年月 from~to 范围（任端留空＝不限）
 - `InvoiceStats.exportExcel()` — 当前筛选所见即所得导出（含合计行、是否使用→是/否、xlsText 防注入＋BOM），文件名 `自营发票统计_YYYYMMDD.xls`；不做 PDF
 

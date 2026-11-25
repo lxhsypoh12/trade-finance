@@ -2600,7 +2600,7 @@ document.getElementById(stage+'-save-status').style.display='none';
   function invGetAll(){return fetch(INV_API+'?order=id.asc',{headers:{apikey:INV_KEY,Authorization:'Bearer '+INV_KEY}}).then(function(r){return r.json()})}
   function invInsert(records){return fetch(INV_API,{method:'POST',headers:{apikey:INV_KEY,Authorization:'Bearer '+INV_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(records)}).then(function(r){return r.json()})}
   function invUpdate(id,fields){return fetch(INV_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:INV_KEY,Authorization:'Bearer '+INV_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
-  function invDelete(id){return fetch(INV_API+'?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{apikey:INV_KEY,Authorization:'Bearer '+INV_KEY}})}
+  function invDelete(id){var q=Array.isArray(id)?'id=in.('+id.join(',')+')':'id=eq.'+encodeURIComponent(id);return fetch(INV_API+'?'+q,{method:'DELETE',headers:{apikey:INV_KEY,Authorization:'Bearer '+INV_KEY}})}
 
   // ===== 自营发票统计 =====
   var InvoiceStats={
@@ -2631,7 +2631,8 @@ document.getElementById(stage+'-save-status').style.display='none';
       }
       document.getElementById('invoice-tbody').innerHTML=h;
       var sum=0;for(var j=0;j<list.length;j++)sum+=Number(list[j].amount)||0;
-      document.getElementById('invoice-total').textContent='合计（当前筛选 '+list.length+' 条）：'+fmtMoney(sum);
+      var invCnt={};for(var c2=0;c2<list.length;c2++)invCnt[list[c2].invoice_no]=1;
+      document.getElementById('invoice-total').textContent='合计（当前筛选 '+list.length+' 条 / '+Object.keys(invCnt).length+' 张发票）：'+fmtMoney(sum);
       this._renderFilterOpts();
     },
 
@@ -2690,7 +2691,14 @@ document.getElementById(stage+'-save-status').style.display='none';
     },
 
     async toggleUsed(id,checked){
-      await invUpdate(id,{used:!!checked});
+      var target=null;
+      for(var i=0;i<this._rows.length;i++){if(this._rows[i].id===id){target=this._rows[i];break}}
+      var ps=[];
+      for(var j=0;j<this._rows.length;j++){
+        if(this._rows[j].id===id||(target&&this._rows[j].invoice_no===target.invoice_no))ps.push(invUpdate(this._rows[j].id,{used:!!checked}));
+      }
+      if(!ps.length)ps.push(invUpdate(id,{used:!!checked}));
+      await Promise.all(ps);
       await this.render();
     },
 
@@ -2748,21 +2756,19 @@ document.getElementById(stage+'-save-status').style.display='none';
       if(!recs.length){alert('模版中未抓到有效发票行：请确认使用财务「全量发票查询导出结果」模版');if(evt.target)evt.target.value='';return}
       var cur=null;try{cur=await invGetAll()}catch(e){cur=null}
       if(!Array.isArray(cur)){alert('读取现有发票失败：请检查网络后重试（本次上传已中止，未写入任何数据）');if(evt.target)evt.target.value='';return}
-      var dedup={},order=[];
-      for(var d=0;d<recs.length;d++){if(dedup[recs[d].invoice_no]===undefined)order.push(recs[d].invoice_no);dedup[recs[d].invoice_no]=recs[d]}
-      recs=order.map(function(kk){return dedup[kk]});
-      var adds=[],ups=[];
-      for(var i=0;i<recs.length;i++){
-        var ex=null;
-        for(var k=0;k<cur.length;k++){if(cur[k].invoice_no===recs[i].invoice_no){ex=cur[k];break}}
-        if(ex)ups.push([ex.id,recs[i]]);else adds.push(recs[i]);
+      var delIds=[],posts=[],newRec=0,ovrRec=0,consumed={};
+      for(var i2=0;i2<recs.length;i2++){
+        var rc=recs[i2],match=null;
+        for(var k=0;k<cur.length;k++){
+          if(consumed[cur[k].id])continue;
+          if(cur[k].invoice_no===rc.invoice_no&&cur[k].goods===rc.goods&&Number(cur[k].amount)===rc.amount){match=cur[k];break}
+        }
+        if(match){consumed[match.id]=1;delIds.push(match.id);posts.push({invoice_no:rc.invoice_no,seller:rc.seller,buyer:rc.buyer,period:rc.period,goods:rc.goods,amount:rc.amount,used:!!match.used});ovrRec++}
+        else{posts.push({invoice_no:rc.invoice_no,seller:rc.seller,buyer:rc.buyer,period:rc.period,goods:rc.goods,amount:rc.amount,used:false});newRec++}
       }
-      if(adds.length)await invInsert(adds);
-      for(var u=0;u<ups.length;u++){
-        var r=ups[u][1];
-        await invUpdate(ups[u][0],{seller:r.seller,buyer:r.buyer,period:r.period,goods:r.goods,amount:r.amount});
-      }
-      alert('上传完成：新增 '+adds.length+' 条、更新 '+ups.length+' 条'+(this._lastSkipped?'、跳过 '+this._lastSkipped+' 条（无有效发票号或开票日期）':'')+'（发票号重复者按模版覆盖，勾选状态保留）');
+      if(delIds.length)await invDelete(delIds);
+      if(posts.length)await invInsert(posts);
+      alert('上传完成：新增 '+newRec+' 条、覆盖 '+ovrRec+' 条'+(this._lastSkipped?'、跳过 '+this._lastSkipped+' 条（无有效发票号或开票日期）':'')+'（同发票+同科目+同价税合计＝覆盖并保留勾选；其余原记录保留不动）');
       if(evt.target)evt.target.value='';
       await this.render();
     },
