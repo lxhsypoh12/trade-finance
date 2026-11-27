@@ -871,6 +871,8 @@ document.getElementById(stage+'-save-status').style.display='none';
       var update={};
       if(field==='quotes'){try{update[field]=JSON.parse(value)}catch(e){update[field]=[]}}else if(field==='amount'||field==='trade_cost'||field==='win_rate'||field==='win_amount'||field==='actual_cost'||field==='actual_revenue')update[field]=parseFloat(value)||0;else if(field==='profit_included')update[field]=(value===true||value==='true');else update[field]=value;
       update.updated_at=new Date().toISOString();
+      // done 阶段改 时间/类型/规模 时重生成项目名称，并入同一次 PATCH（2026-11-27 用户拍板；String 归一 id 兼容数字/字符串）
+      if(stage==='done'&&(field==='time'||field==='biz_type'||field==='amount')){var c0=this._cache['done'],r0=null;for(var j0=0;j0<c0.length;j0++){if(String(c0[j0].id)===String(id)){r0=c0[j0];break}}if(r0){var mg={};for(var k0 in r0)mg[k0]=r0[k0];mg[field]=update[field];update.project_name=autoProjectName(mg)}}
       await this.updateRecord(id,update);
       var cache=this._cache[stage];
       for(var i=0;i<cache.length;i++){if(cache[i].id===id){cache[i][field]=update[field];break}}
@@ -882,7 +884,7 @@ document.getElementById(stage+'-save-status').style.display='none';
         if(row){var ep=parseFloat(row.win_amount||0)*parseFloat(row.win_rate||0)/100||0;row.est_profit=ep}
         this.render('win');
       }
-      if(stage==='done'&&(field==='actual_cost'||field==='actual_revenue'||field==='business_segment'||field==='time'||field==='profit_included')){this.render('done');}
+      if(stage==='done'&&(field==='actual_cost'||field==='actual_revenue'||field==='business_segment'||field==='time'||field==='profit_included'||field==='amount'||field==='biz_type')){this.render('done');}
     },
 
     toggleQuotes(id){var el=document.getElementById('quotes-'+id);el.style.display=el.style.display==='none'?'':'none';if(el.style.display!=='none')this.renderQuotes(id)},
