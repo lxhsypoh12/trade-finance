@@ -105,10 +105,10 @@ invDelete(id)      // DELETE self_invoices?id=eq.{id}
 - `Stats.render(stage)` — 渲染指定阶段表格
 - `Stats.addBid()` — 投标阶段添加记录
 - `Stats.batchDelete(stage)` — 批量删除
-- `Stats.migrateBidToWin()` — 投标→中标迁移
+- `Stats.migrateBidToWin()` — 投标→中标迁移（入库前生成项目名称；`selectQuote` 报价选定路径同样生成）
 - `Stats.migrateWinToDone()` — 中标→完成迁移（迁移时自动重生成项目名称随新记录入库）
-- `Stats.cellUpdate(stage,id,field,value)` — 单元格 onblur 自动保存（done 改 time/biz_type/amount 时重算项目名称并入同一 PATCH）
-- done 表「项目名称」列系统自动生成、只读（2026-11-27 用户拍板）：`autoProjectName(r)` = 金融机构 + 完成时间规整6位年月（5位数字补月零、6位原样、其余保留修剪原文）+ 业务类型 +（规模）；规模 ≥10000 万换算 X亿（去尾零，如 4.5亿/1.97亿），否则 X万；金额空/0 不输出括号段。存量老记录名称不动，仅迁移与源字段变更时生成。表头灰字为「(系统自动生成)」
+- `Stats.cellUpdate(stage,id,field,value)` — 单元格 onblur 自动保存（三阶段改 time/biz_type/amount/bank 时重算项目名称并入同一 PATCH；bid/win 名称 span 原地更新不整表刷新，done 维持整表重渲染）
+- 三阶段表第一列「项目名称」均系统自动生成、只读（2026-11-27 用户拍板）：`autoProjectName(r)` = 金融机构 + 时间规整6位年月（5位数字补月零、6位原样、其余保留修剪原文）+ 业务类型 +（规模）；规模 ≥10000 万换算 X亿（去尾零，如 4.5亿/1.97亿），否则 X万；金额空/0 不输出括号段。表头灰字「(系统自动生成)」；bid/win 名称 span id=`pname-{stage}-{id}`；Excel 导出三阶段首数据列均为项目名称（xlsText 防注入）。done 存量老记录名称不动；bid/win 存量 48 条空名已于 2026-11-27 一次性补齐（补齐前备份 `E:\AI\数据备份\trade_stats备份_2026-11-27投中补名前.json`）
 
 ### `LoanStats` 对象（贷款统计）
 - `LoanStats.render()` — 渲染贷款表格（含行着色）
