@@ -932,8 +932,8 @@ document.getElementById(stage+'-save-status').style.display='none';
     exportExcel(stage){
       var names={bid:'投标阶段业务统计表',win:'中标阶段业务统计表',done:'完成阶段业务统计表'};
       var cols={
-        bid:['区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人'],
-        win:['区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人','贸易方','贸易成本(万元)','中标费率(%)','中标金额(万元)','预计利润(万元)'],
+        bid:['项目名称','区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人'],
+        win:['项目名称','区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人','贸易方','贸易成本(万元)','中标费率(%)','中标金额(万元)','预计利润(万元)'],
         done:['项目名称','区域','城投公司','金融机构','业务规模(万元)','业务类型','完成时间(年/月)','负责人(经理-助理)','业务板块','贸易方','实际利润(万元)','归档状态','归档日期','计入利润']
       };
       var data=this._cache[stage]||[];
@@ -948,11 +948,11 @@ document.getElementById(stage+'-save-status').style.display='none';
         var r=data[i];
         html+='<tr><td>'+(i+1)+'</td>';
         if(stage==='bid'){
-          html+='<td>'+xlsText(r.region)+'</td><td>'+xlsText(r.company)+'</td><td>'+xlsText(r.bank)+'</td>';
+          html+='<td>'+xlsText(r.project_name)+'</td><td>'+xlsText(r.region)+'</td><td>'+xlsText(r.company)+'</td><td>'+xlsText(r.bank)+'</td>';
           html+='<td>'+(r.amount||'')+'</td><td>'+xlsText(r.biz_type)+'</td><td>'+xlsText(r.time)+'</td><td>'+xlsText(r.person)+'</td>';
         }else if(stage==='win'){
           var ep=parseFloat(r.win_amount||0)*parseFloat(r.win_rate||0)/100;
-          html+='<td>'+xlsText(r.region)+'</td><td>'+xlsText(r.company)+'</td><td>'+xlsText(r.bank)+'</td>';
+          html+='<td>'+xlsText(r.project_name)+'</td><td>'+xlsText(r.region)+'</td><td>'+xlsText(r.company)+'</td><td>'+xlsText(r.bank)+'</td>';
           html+='<td>'+(r.amount||'')+'</td><td>'+xlsText(r.biz_type)+'</td><td>'+xlsText(r.time)+'</td><td>'+xlsText(r.person)+'</td>';
           html+='<td>'+xlsText(r.trader)+'</td><td>'+(r.trade_cost||'')+'</td><td>'+(r.win_rate||'')+'</td><td>'+(r.win_amount||'')+'</td><td>'+ep.toFixed(2)+'</td>';
         }else if(stage==='done'){
