@@ -815,7 +815,7 @@
   function sbUpdate(id,fields){return fetch(SB_API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(fields)})}
   function sbDelete(ids){return fetch(SB_API+'?id=in.('+ids.map(function(x){return encodeURIComponent(x)}).join(',')+')',{method:'DELETE',headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}})}
 
-  var BIZ_TYPES=['银承-回报','银承-供应链','信用证-回报','信用证-供应链','跑量/受托支付','存款','时点','商票质押贷款','存单质押贷款','商票融资贴现','其他'];
+  var BIZ_TYPES=['银承-回报','银承-供应链','信用证-回报','信用证-供应链','跑量/受托支付','存款','时点','商票质押贷款','存单质押贷款','商票融资贴现','融资租赁直转回','其他'];
   function bizTypeOpts(sel){var o='<option value=\"\">选择类型</option>';for(var i=0;i<BIZ_TYPES.length;i++)o+='<option value=\"'+BIZ_TYPES[i]+'\"'+(sel===BIZ_TYPES[i]?' selected':'')+'>'+BIZ_TYPES[i]+'</option>';return o}
   function segmentOpts(sel){var segs=['咨询','自营'];var o='<option value="">选择板块</option>';for(var i=0;i<segs.length;i++)o+='<option value="'+segs[i]+'"'+(sel===segs[i]?' selected':'')+'>'+segs[i]+'</option>';return o}
   var SEG_ITEMS={'咨询':{income:[['service_fee','服务费收入'],['other','其他收入']],expense:[['service_provider','服务商支出'],['other','其他支出']]},'自营':{income:[['service_fee','服务费收入'],['deposit_interest','存款利息收入'],['post_interest','后置利息收入'],['other','其他收入']],expense:[['service_provider','服务商支出'],['discount','贴现/议付支出'],['capital_occupy','资金占用支出'],['guarantee_fee','担保费'],['loan_interest','贷款利息'],['retained_profit','留存利润支出'],['handling_fee','手续费支出'],['other','其他支出']]}};
