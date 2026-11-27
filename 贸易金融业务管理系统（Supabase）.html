@@ -871,11 +871,13 @@ document.getElementById(stage+'-save-status').style.display='none';
       var update={};
       if(field==='quotes'){try{update[field]=JSON.parse(value)}catch(e){update[field]=[]}}else if(field==='amount'||field==='trade_cost'||field==='win_rate'||field==='win_amount'||field==='actual_cost'||field==='actual_revenue')update[field]=parseFloat(value)||0;else if(field==='profit_included')update[field]=(value===true||value==='true');else update[field]=value;
       update.updated_at=new Date().toISOString();
-      // done 阶段改 时间/类型/规模 时重生成项目名称，并入同一次 PATCH（2026-11-27 用户拍板；String 归一 id 兼容数字/字符串）
-      if(stage==='done'&&(field==='time'||field==='biz_type'||field==='amount')){var c0=this._cache['done'],r0=null;for(var j0=0;j0<c0.length;j0++){if(String(c0[j0].id)===String(id)){r0=c0[j0];break}}if(r0){var mg={};for(var k0 in r0)mg[k0]=r0[k0];mg[field]=update[field];update.project_name=autoProjectName(mg)}}
+      // 三阶段改 时间/类型/规模/金融机构 时重生成项目名称，并入同一次 PATCH（2026-11-27 用户拍板；String 归一 id 兼容数字/字符串）
+      if((stage==='bid'||stage==='win'||stage==='done')&&(field==='time'||field==='biz_type'||field==='amount'||field==='bank')){var c0=this._cache[stage],r0=null;for(var j0=0;j0<c0.length;j0++){if(String(c0[j0].id)===String(id)){r0=c0[j0];break}}if(r0){var mg={};for(var k0 in r0)mg[k0]=r0[k0];mg[field]=update[field];update.project_name=autoProjectName(mg)}}
       await this.updateRecord(id,update);
       var cache=this._cache[stage];
-      for(var i=0;i<cache.length;i++){if(cache[i].id===id){cache[i][field]=update[field];break}}
+      for(var i=0;i<cache.length;i++){if(cache[i].id===id){cache[i][field]=update[field];if(update.project_name!==undefined)cache[i].project_name=update.project_name;break}}
+      // bid/win 名称文字原地更新（done 无该 id 走既有整表重渲染，天然跳过）
+      if(update.project_name!==undefined){var pe=document.getElementById('pname-'+stage+'-'+id);if(pe)pe.textContent=update.project_name}
       document.getElementById(stage+'-save-status').textContent='已同步';
       document.getElementById(stage+'-save-status').style.display='inline';
       // Auto-calc formula cells
