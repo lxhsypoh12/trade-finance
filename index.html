@@ -822,6 +822,8 @@
   function parseDetail(r){try{var d=JSON.parse(r.profit_detail||'');return(d&&typeof d==='object')?d:null}catch(e){return null}}
   function legacyDetail(r){return{income:{other:parseFloat(r.actual_revenue)||0},expense:{other:parseFloat(r.actual_cost)||0}}}
   function effProfit(r){var d=parseDetail(r);if(d){var s=0,k,inc=d.income||{},exp=d.expense||{};for(k in inc)s+=parseFloat(inc[k])||0;for(k in exp)s-=parseFloat(exp[k])||0;return s}return(parseFloat(r.actual_revenue||0)-parseFloat(r.actual_cost||0))}
+  // 完成阶段项目名称自动生成：金融机构+年月(6位规整)+业务类型（规模）；≥1亿换算亿、去尾零（2026-11-27 用户拍板，规格见 docs/superpowers/specs）
+  function autoProjectName(r){if(!r)return'';var bank=String(r.bank==null?'':r.bank).trim();var t=String(r.time==null?'':r.time).trim();var d=t.replace(/\D/g,''),ts;if(d.length===5)ts=d.slice(0,4)+'0'+d.slice(4);else if(d.length===6)ts=d;else ts=t;var type=String(r.biz_type==null?'':r.biz_type).trim();var amt=parseFloat(r.amount),scale='';if(!isNaN(amt)&&amt>0)scale=amt>=10000?'（'+parseFloat((amt/10000).toFixed(2))+'亿）':'（'+parseFloat(amt.toFixed(2))+'万）';return bank+ts+type+scale}
   function doneTimeVal(r){var m=String((r&&r.time)||'').match(/(\d{4})\D*(\d{1,2})?\D*(\d{1,2})?/);if(!m)return 0;return parseInt(m[1],10)*10000+(parseInt(m[2],10)||0)*100+(parseInt(m[3],10)||0)}
   function escHtml(s){if(s===null||s===undefined)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
   // Excel 导出文本单元格防公式注入（CWE-1236）：以 = + - @ TAB CR 开头时加 ' 前缀失活；数字列勿用（会破坏求和）
@@ -2861,6 +2863,7 @@ document.getElementById(stage+'-save-status').style.display='none';
   window.Guide = Guide;
   window.GUIDE_DATA = GUIDE_DATA;
   window.InvoiceStats = InvoiceStats;
+  window.autoProjectName = autoProjectName;
   if(qElType)qElType.addEventListener('change',recalcQuote);
   applyLabels('bill');
   showView('home');
