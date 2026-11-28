@@ -41,7 +41,7 @@
 ### 数据存储：Supabase
 - 项目 URL：`https://jpcjwhyotcrhxstzwzid.supabase.co`
 - 匿名 Key（公开安全）：`sb_publishable_hE4GbUYp-NYiD1SYBvw0wg_yUNtV6Bg`
-- **trade_stats 表**：三阶段统计共用，`stage` 字段区分（`bid`/`win`/`done`）；done 行含 `profit_included` 布尔列（默认 true）——「计入利润」勾选，取消勾选的行不计入网页三汇总与飞书日报总利润
+- **trade_stats 表**：三阶段统计共用，`stage` 字段区分（`bid`/`win`/`done`）；done 行含 `profit_included` 布尔列（默认 true）——「计入利润」勾选，取消勾选的行不计入网页三汇总与飞书日报总利润；2026-11-28 起含重点项目看板 4 列：`key_project`（布尔默认 false，「纳入重点项目看板」勾选）、`progress`（项目进展）、`obstacle`（障碍）、`progress_updated_at`（进展最后更新时间）
 - **loan_businesses 表**：贷款业务独立表（独立统计、独立通知）
 - **subsidiary_companies 表**：贸易子公司信息汇总表（独立统计，仅查看，不推送飞书日报）
 - **finance_costs 表**：财务看板成本录入表（`cost_type`：fixed=公司固定成本 / chain=链条费 / reimburse=报销费 / other=其他支出；金额单位**元**）
@@ -89,7 +89,7 @@ invDelete(id)      // DELETE self_invoices?id=eq.{id}
 📋 贸易业务统计汇总（max-width: 1008px，每行3张）
   └── 📝 投标阶段 | 🏆 中标阶段 | ✅ 完成阶段
   └── 💰 贸易子公司贷款类业务统计 | 🏢 贸易子公司统计（仅查看） | ⚠️ 错误总结日志（第二行）
-  └── 📖 业务模式指南（第三行左对齐）
+  └── 📖 业务模式指南 | 🎯 重点项目进度看板（第三行左对齐；看板卡 2026-11-28 新增）
 
 💹 财务板块（max-width: 1008px，每行3张；后续财务类模块新增到此标题下）
   └── 💹 财务看板（有前端密码门，不推送飞书日报）
@@ -107,7 +107,8 @@ invDelete(id)      // DELETE self_invoices?id=eq.{id}
 - `Stats.batchDelete(stage)` — 批量删除
 - `Stats.migrateBidToWin()` — 投标→中标迁移（入库前生成项目名称；`selectQuote` 报价选定路径同样生成）
 - `Stats.migrateWinToDone()` — 中标→完成迁移（迁移时自动重生成项目名称随新记录入库）
-- `Stats.cellUpdate(stage,id,field,value)` — 单元格 onblur 自动保存（三阶段改 time/biz_type/amount/bank 时重算项目名称并入同一 PATCH；bid/win 名称 span 原地更新不整表刷新，done 维持整表重渲染）
+- `Stats.cellUpdate(stage,id,field,value)` — 单元格 onblur 自动保存（三阶段改 time/biz_type/amount/bank 时重算项目名称并入同一 PATCH；bid/win 名称 span 原地更新不整表刷新，done 维持整表重渲染；布尔分支含 profit_included/key_project）
+- 三阶段表尾列「纳入重点项目看板」勾选（class=kp-cb，onchange→cellUpdate(stage,id,'key_project',checked)）；列数/colspan 现状：bid 11 列（报价行与空表 colspan=11）、win 15（空表 15）、done 16（空表 16）
 - 三阶段表第一列「项目名称」均系统自动生成、只读（2026-11-27 用户拍板）：`autoProjectName(r)` = 金融机构 + 时间规整6位年月（5位数字补月零、6位原样、其余保留修剪原文）+ 业务类型 +（规模）；规模 ≥10000 万换算 X亿（去尾零，如 4.5亿/1.97亿），否则 X万；金额空/0 不输出括号段。表头灰字「(系统自动生成)」；bid/win 名称 span id=`pname-{stage}-{id}`；Excel 导出三阶段首数据列均为项目名称（xlsText 防注入）。done 存量老记录名称不动；bid/win 存量 48 条空名已于 2026-11-27 一次性补齐（补齐前备份 `E:\AI\数据备份\trade_stats备份_2026-11-27投中补名前.json`）
 
 ### `LoanStats` 对象（贷款统计）
@@ -142,6 +143,15 @@ invDelete(id)      // DELETE self_invoices?id=eq.{id}
 - `InvoiceStats.toggleUsed(id,checked)` — 「是否使用」勾选即时 PATCH，**按发票号联动**（同 invoice_no 所有行一起勾/取消）；勾选行红 loan-row-red / 未勾选绿 loan-row-green
 - `InvoiceStats.setFilter(k,v)` / `clearFilters()` — 筛选：销方/购买方/货物下拉（distinct）、是否使用 是/否/全部、开票年月 from~to 范围（任端留空＝不限）
 - `InvoiceStats.exportExcel()` — 当前筛选所见即所得导出（含合计行、是否使用→是/否、xlsText 防注入＋BOM），文件名 `自营发票统计_YYYYMMDD.xls`；不做 PDF
+
+### `KeyProjStats` 对象（重点项目进度看板，2026-11-28 上线）
+- 数据源：单次 GET `trade_stats?select=*&key_project=eq.true`（服务端过滤，进入看板每次重拉）；三阶段勾选行自动汇入，跨阶段迁移天然携带勾选与进展（迁移为整行复制，零额外代码）
+- `KeyProjStats.render()` — load→响应非数组（字段未加）时 #kp-error 降级提示「请先执行加列 SQL」→ _buildToolbar＋_applyFilters；三区块（bid/win/done）上下排、区内 doneTimeVal 降序；空区块提示 colspan 10/11/15
+- 只读列：bid 7 列（项目名称/区域/城投公司/业务类型/业务规模/投标时间/负责人）、win 8 列（+贸易方）、done 12 列（+实际利润/收入合计/支出合计/待回款金额，均万元 toFixed(2)）；**`pendingReceive(r)`** = profit_detail 收入项中 payee[k].verified≠true 的金额合计（没填收款信息=未核对计入），无明细/损坏 JSON 回退 actual_revenue||0
+- `KeyProjStats.cellSave(id,field,value)` — 项目进展/障碍 textarea onblur 保存，PATCH 恰三键 {字段值, progress_updated_at, updated_at}；时间格 `kput-{id}` 原地更新（YYYY-MM-DD HH:mm，空值灰色「尚未更新」），不整表重渲
+- 筛选：区域/城投公司/业务类型/负责人/贸易方五下拉（`_f` 勾选值集），跨字段 AND、字段内 OR；`kpSearch(field,kw)` 输入关键词→「包含 kw」的选项整体设为勾选集（替换式，之后 toggleOpt 手动增减为叠加式）；**贸易方筛选仅作用 win/done 区块（bid 豁免）**；字段空值行在该筛选生效时被滤除；业务类型选项按 BIZ_TYPES 序、其余中文排序、空值不入选项；按钮摘要「首项 等N项」，任一筛选生效显示「✕ 清空筛选」
+- 不推送飞书日报；无 Excel/PDF 导出（例会展示直接用网页）
+- 部署记录：2026-11-28 用户已在 Supabase 后台执行加列 SQL（key_project/progress/obstacle/progress_updated_at），加列前全表备份 `E:\AI\数据备份\trade_stats备份_2026-11-28重点看板加列前.json`（86 行）
 
 ## 行着色规则（贷款统计）
 - 🟢 `#c6f6d5`（绿色）：距到期日 > 2 个月
