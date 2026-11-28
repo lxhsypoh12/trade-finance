@@ -96,7 +96,9 @@
   .kp-sec-title { margin: 20px 0 8px; font-size: 15px; color: #1e3a5f; }
   #kp-error { background: #fff5f5; color: #c53030; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
   .kp-filter { position: relative; display: inline-block; margin-right: 8px; }
-  .kp-filter > button { font-size: 12px; padding: 4px 10px; border: 1px solid #cbd5e0; border-radius: 4px; background: #fff; cursor: pointer; }
+  .kp-filter > button { font-size: 12px; padding: 4px 10px; border: 1px solid #cbd5e0; border-radius: 4px; background: #fff; cursor: pointer; text-align: left; }
+  .kp-fbtn-txt { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  html { scrollbar-gutter: stable; }
   .kp-panel { position: absolute; top: 100%; left: 0; z-index: 50; background: #fff; border: 1px solid #cbd5e0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.12); padding: 8px; min-width: 200px; max-height: 280px; overflow: auto; }
   .kp-panel input[type="text"] { width: 100%; box-sizing: border-box; font-size: 12px; padding: 4px 8px; margin-bottom: 6px; border: 1px solid #e2e8f0; border-radius: 4px; }
   .kp-panel label { display: block; font-size: 12px; padding: 2px 0; cursor: pointer; white-space: nowrap; }
@@ -2954,7 +2956,7 @@ document.getElementById(stage+'-save-status').style.display='none';
       var tb=document.getElementById('kp-toolbar');if(!tb)return;
       var fields=['region','company','biz_type','person','trader'],html='';
       for(var i=0;i<fields.length;i++){var f=fields[i];
-        html+='<span class="kp-filter"><button type="button" onclick="KeyProjStats.togglePanel(\''+f+'\')">'+this._FLABELS[f]+'：<b id="kpf-'+f+'-sum">全部</b></button>'
+        html+='<span class="kp-filter"><button type="button" style="width:150px" onclick="KeyProjStats.togglePanel(\''+f+'\')"><span class="kp-fbtn-txt">'+this._FLABELS[f]+'：<b id="kpf-'+f+'-sum">全部</b></span></button>'
           +'<div class="kp-panel" id="kpfp-'+f+'" style="display:none">'
           +'<input type="text" id="kpfs-'+f+'" placeholder="输入关键词自动勾选…" oninput="KeyProjStats.kpSearch(\''+f+'\',this.value)">'
           +'<div id="kpfo-'+f+'"></div>'
