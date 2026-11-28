@@ -499,7 +499,7 @@
     <h3 class="kp-sec-title">🏆 中标重点项目（<span id="kp-win-count">0</span> 条）</h3>
     <div class="stats-table-wrapper"><table class="stats-table" id="kp-win-table"><thead><tr><th>项目名称</th><th>区域</th><th>城投公司</th><th>业务规模(万元)</th><th>业务类型</th><th>中标时间</th><th>负责人</th><th>贸易方</th><th>项目进展</th><th>障碍</th><th>进展最后更新</th></tr></thead><tbody id="kp-win-tbody"></tbody></table></div>
     <h3 class="kp-sec-title">✅ 完成重点项目（<span id="kp-done-count">0</span> 条）</h3>
-    <div class="stats-table-wrapper"><table class="stats-table" id="kp-done-table"><thead><tr><th>项目名称</th><th>区域</th><th>城投公司</th><th>业务规模(万元)</th><th>业务类型</th><th>完成时间</th><th>负责人</th><th>贸易方</th><th>实际利润(万元)</th><th>收入合计(万元)</th><th>支出合计(万元)</th><th>待回款金额(万元)</th><th>项目进展</th><th>障碍</th><th>进展最后更新</th></tr></thead><tbody id="kp-done-tbody"></tbody></table></div>
+    <div class="stats-table-wrapper"><table class="stats-table" id="kp-done-table"><thead><tr><th>项目名称</th><th>区域</th><th>城投公司</th><th>业务规模(万元)</th><th>业务类型</th><th>完成时间</th><th>负责人</th><th>贸易方</th><th>实际利润(万元)</th><th>收入合计(万元)</th><th>待回款金额(万元)</th><th>支出合计(万元)</th><th>项目进展</th><th>障碍</th><th>进展最后更新</th></tr></thead><tbody id="kp-done-tbody"></tbody></table></div>
   </div>
 </div>
 <div id="view-stats-loan" style="display:none">
@@ -3026,7 +3026,7 @@ document.getElementById(stage+'-save-status').style.display='none';
           var d=parseDetail(r),iS=0,eS=0,k;
           if(d){for(k in(d.income||{}))iS+=parseFloat(d.income[k])||0;for(k in(d.expense||{}))eS+=parseFloat(d.expense[k])||0}
           else{iS=parseFloat(r.actual_revenue||0)||0;eS=parseFloat(r.actual_cost||0)||0}
-          tds=[r.project_name,r.region,r.company,r.amount,r.biz_type,r.time,r.person,r.trader,effProfit(r).toFixed(2),iS.toFixed(2),eS.toFixed(2),pendingReceive(r).toFixed(2)];
+          tds=[r.project_name,r.region,r.company,r.amount,r.biz_type,r.time,r.person,r.trader,effProfit(r).toFixed(2),iS.toFixed(2),pendingReceive(r).toFixed(2),eS.toFixed(2)];
         }
         var row='<tr>';
         for(var j=0;j<tds.length;j++)row+='<td><span class="readonly-cell">'+escHtml(tds[j]==null?'':tds[j])+'</span></td>';

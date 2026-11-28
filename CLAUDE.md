@@ -147,7 +147,7 @@ invDelete(id)      // DELETE self_invoices?id=eq.{id}
 ### `KeyProjStats` 对象（重点项目进度看板，2026-11-28 上线）
 - 数据源：单次 GET `trade_stats?select=*&key_project=eq.true`（服务端过滤，进入看板每次重拉）；三阶段勾选行自动汇入，跨阶段迁移天然携带勾选与进展（迁移为整行复制，零额外代码）
 - `KeyProjStats.render()` — load→响应非数组（字段未加）时 #kp-error 降级提示「请先执行加列 SQL」→ _buildToolbar＋_applyFilters；三区块（bid/win/done）上下排、区内 doneTimeVal 降序；空区块提示 colspan 10/11/15
-- 只读列：bid 7 列（项目名称/区域/城投公司/业务类型/业务规模/投标时间/负责人）、win 8 列（+贸易方）、done 12 列（+实际利润/收入合计/支出合计/待回款金额，均万元 toFixed(2)）；**`pendingReceive(r)`** = profit_detail 收入项中 payee[k].verified≠true 的金额合计（没填收款信息=未核对计入），无明细/损坏 JSON 回退 actual_revenue||0
+- 只读列：bid 7 列（项目名称/区域/城投公司/业务类型/业务规模/投标时间/负责人）、win 8 列（+贸易方）、done 12 列（+实际利润/收入合计/待回款金额/支出合计，均万元 toFixed(2)；2026-11-28 用户拍板待回款列前移至支出合计前）；**`pendingReceive(r)`** = profit_detail 收入项中 payee[k].verified≠true 的金额合计（没填收款信息=未核对计入），无明细/损坏 JSON 回退 actual_revenue||0
 - `KeyProjStats.cellSave(id,field,value)` — 项目进展/障碍 textarea onblur 保存，PATCH 恰三键 {字段值, progress_updated_at, updated_at}；时间格 `kput-{id}` 原地更新（YYYY-MM-DD HH:mm，空值灰色「尚未更新」），不整表重渲
 - 筛选：区域/城投公司/业务类型/负责人/贸易方五下拉（`_f` 勾选值集），跨字段 AND、字段内 OR；`kpSearch(field,kw)` 输入关键词→「包含 kw」的选项整体设为勾选集（替换式，之后 toggleOpt 手动增减为叠加式）；**贸易方筛选仅作用 win/done 区块（bid 豁免）**；字段空值行在该筛选生效时被滤除；业务类型选项按 BIZ_TYPES 序、其余中文排序、空值不入选项；按钮摘要「首项 等N项」，任一筛选生效显示「✕ 清空筛选」
 - 不推送飞书日报；无 Excel/PDF 导出（例会展示直接用网页）
