@@ -95,6 +95,11 @@
   .home-card.card-keyproj { border-top-color: #d53f8c; }
   .kp-sec-title { margin: 20px 0 8px; font-size: 15px; color: #1e3a5f; }
   #kp-error { background: #fff5f5; color: #c53030; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+  .kp-filter { position: relative; display: inline-block; margin-right: 8px; }
+  .kp-filter > button { font-size: 12px; padding: 4px 10px; border: 1px solid #cbd5e0; border-radius: 4px; background: #fff; cursor: pointer; }
+  .kp-panel { position: absolute; top: 100%; left: 0; z-index: 50; background: #fff; border: 1px solid #cbd5e0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.12); padding: 8px; min-width: 200px; max-height: 280px; overflow: auto; }
+  .kp-panel input[type="text"] { width: 100%; box-sizing: border-box; font-size: 12px; padding: 4px 8px; margin-bottom: 6px; border: 1px solid #e2e8f0; border-radius: 4px; }
+  .kp-panel label { display: block; font-size: 12px; padding: 2px 0; cursor: pointer; white-space: nowrap; }
   .home-card.card-invoice { border-top-color: #b7791f; }
   .home-card .icon { font-size: 48px; margin-bottom: 16px; }
   .home-card h2 { font-size: 18px; color: #2d3748; margin-bottom: 8px; }
@@ -2893,7 +2898,92 @@ document.getElementById(stage+'-save-status').style.display='none';
         if(Array.isArray(data)){this._rows=data;this._loadError=false}else{this._rows=[];this._loadError=true}
       }catch(e){this._rows=[];this._loadError=true}
     },
-    kpMatch(r){return true},
+    _FLABELS:{region:'区域',company:'城投公司',biz_type:'业务类型',person:'负责人',trader:'贸易方'},
+    // 筛选判定：跨字段 AND、字段内 OR；trader 仅作用 win/done 区（投标区无贸易方列，2026-11-28 用户确认口径）；字段空值行在该筛选生效时被滤除
+    kpMatch(r){
+      var f=this._f,fields=['region','company','biz_type','person'];
+      for(var i=0;i<fields.length;i++){var k=fields[i];if(f[k].length&&f[k].indexOf(String(r[k]==null?'':r[k]).trim())<0)return false}
+      if(f.trader.length&&r.stage!=='bid'&&f.trader.indexOf(String(r.trader==null?'':r.trader).trim())<0)return false;
+      return true;
+    },
+    _applyFilters(){
+      var rows=this._rows.filter(this.kpMatch.bind(this));
+      for(var i=0;i<KP_SECS.length;i++){this._renderSec(KP_SECS[i][0],KP_SECS[i][1],rows.filter(function(st){return function(r){return r.stage===st}}(KP_SECS[i][0])))}
+      this._syncSummaries();
+    },
+    togglePanel(field){
+      var p=document.getElementById('kpfp-'+field);if(!p)return;
+      var show=p.style.display==='none';
+      var all=document.querySelectorAll('.kp-panel');for(var i=0;i<all.length;i++)all[i].style.display='none';
+      p.style.display=show?'block':'none';
+    },
+    _optsFor(field){
+      var seen={},vals=[];
+      for(var i=0;i<this._rows.length;i++){
+        if(field==='trader'&&this._rows[i].stage==='bid')continue;
+        var v=String(this._rows[i][field]==null?'':this._rows[i][field]).trim();
+        if(!v||seen[v])continue;seen[v]=1;vals.push(v);
+      }
+      if(field==='biz_type')vals.sort(function(a,b){var ia=BIZ_TYPES.indexOf(a),ib=BIZ_TYPES.indexOf(b);return(ia<0?999:ia)-(ib<0?999:ib)});
+      else vals.sort(function(a,b){return a.localeCompare(b,'zh')});
+      return vals;
+    },
+    // 关键词联想（用户指定交互）：输入即把「包含关键词」的选项整体设为勾选集（替换式），之后手动增减为叠加式
+    kpSearch(field,kw){
+      kw=String(kw||'').trim();
+      if(!kw)this._f[field]=[];
+      else{var lo=kw.toLowerCase();this._f[field]=this._optsFor(field).filter(function(v){return v.toLowerCase().indexOf(lo)>=0})}
+      this._refreshPanel(field);this._applyFilters();
+    },
+    toggleOpt(field,val,checked){
+      var arr=this._f[field],ix=arr.indexOf(val);
+      if(checked&&ix<0)arr.push(val);
+      if(!checked&&ix>=0)arr.splice(ix,1);
+      this._applyFilters();
+    },
+    clearField(field){
+      this._f[field]=[];var si=document.getElementById('kpfs-'+field);if(si)si.value='';
+      this._refreshPanel(field);this._applyFilters();
+    },
+    clearFilters(){
+      var fields=['region','company','biz_type','person','trader'];
+      for(var i=0;i<fields.length;i++){this._f[fields[i]]=[];var si=document.getElementById('kpfs-'+fields[i]);if(si)si.value='';this._refreshPanel(fields[i])}
+      this._applyFilters();
+    },
+    _buildToolbar(){
+      var tb=document.getElementById('kp-toolbar');if(!tb)return;
+      var fields=['region','company','biz_type','person','trader'],html='';
+      for(var i=0;i<fields.length;i++){var f=fields[i];
+        html+='<span class="kp-filter"><button type="button" onclick="KeyProjStats.togglePanel(\''+f+'\')">'+this._FLABELS[f]+'：<b id="kpf-'+f+'-sum">全部</b></button>'
+          +'<div class="kp-panel" id="kpfp-'+f+'" style="display:none">'
+          +'<input type="text" id="kpfs-'+f+'" placeholder="输入关键词自动勾选…" oninput="KeyProjStats.kpSearch(\''+f+'\',this.value)">'
+          +'<div id="kpfo-'+f+'"></div>'
+          +'<div style="margin-top:6px;text-align:right"><button type="button" style="font-size:11px;color:#e53e3e;background:none;border:none;cursor:pointer" onclick="KeyProjStats.clearField(\''+f+'\')">清空本组</button></div>'
+          +'</div></span>';
+      }
+      html+='<button type="button" id="kp-clear-btn" style="display:none;font-size:12px;padding:4px 10px;border:1px solid #e53e3e;color:#e53e3e;border-radius:4px;background:#fff;cursor:pointer" onclick="KeyProjStats.clearFilters()">✕ 清空筛选</button>';
+      tb.innerHTML=html;
+      for(var j=0;j<fields.length;j++)this._refreshPanel(fields[j]);
+      this._syncSummaries();
+    },
+    _refreshPanel(field){
+      var box=document.getElementById('kpfo-'+field);if(!box)return;
+      var vals=this._optsFor(field),sel=this._f[field],html='';
+      for(var i=0;i<vals.length;i++){var v=vals[i];
+        html+='<label><input type="checkbox" '+(sel.indexOf(v)>=0?'checked':'')+' onchange="KeyProjStats.toggleOpt(\''+field+'\',\''+escHtml(v)+'\',this.checked)"> '+escHtml(v)+'</label>';
+      }
+      if(!vals.length)html='<div style="font-size:11px;color:#a0aec0">暂无可选值</div>';
+      box.innerHTML=html;
+    },
+    _syncSummaries(){
+      var fields=['region','company','biz_type','person','trader'],any=false;
+      for(var i=0;i<fields.length;i++){var f=fields[i],arr=this._f[f];
+        var el=document.getElementById('kpf-'+f+'-sum');
+        if(el)el.textContent=arr.length===0?'全部':(arr.length===1?arr[0]:arr[0]+' 等'+arr.length+'项');
+        if(arr.length)any=true;
+      }
+      var cb=document.getElementById('kp-clear-btn');if(cb)cb.style.display=any?'':'none';
+    },
     // 进展/障碍编辑保存：恰三键 PATCH（字段值+进展更新时间+记录更新时间），缓存与时间格原地同步、不整表重渲染
     async cellSave(id,field,value){
       var now=new Date().toISOString();
@@ -2912,8 +3002,8 @@ document.getElementById(stage+'-save-status').style.display='none';
         return;
       }
       if(err)err.style.display='none';
-      var rows=this._rows.filter(this.kpMatch.bind(this));
-      for(var i=0;i<KP_SECS.length;i++){this._renderSec(KP_SECS[i][0],KP_SECS[i][1],rows.filter(function(st){return function(r){return r.stage===st}}(KP_SECS[i][0])))}
+      this._buildToolbar();
+      this._applyFilters();
     },
     _renderSec(stage,nCols,list){
       list=list.slice().sort(function(a,b){return doneTimeVal(b)-doneTimeVal(a)});
