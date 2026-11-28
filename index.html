@@ -2937,6 +2937,12 @@ document.getElementById(stage+'-save-status').style.display='none';
       else{var lo=kw.toLowerCase();this._f[field]=this._optsFor(field).filter(function(v){return v.toLowerCase().indexOf(lo)>=0})}
       this._refreshPanel(field);this._applyFilters();
     },
+    // 按索引反查选项值（2026-11-28 终审 I-1 修复：用户可控文本不再拼入内联 onchange 的 JS 源码，消除撇号/反斜杠值点击静默失效与存储型 XSS 注入面；面板与 _optsFor 同序重建，索引天然对齐，照 Stats.selectQuote(id,idx) 既有惯例）
+    toggleOptIdx(field,idx,checked){
+      var v=this._optsFor(field)[idx];
+      if(v==null)return;
+      this.toggleOpt(field,v,checked);
+    },
     toggleOpt(field,val,checked){
       var arr=this._f[field],ix=arr.indexOf(val);
       if(checked&&ix<0)arr.push(val);
@@ -2972,7 +2978,7 @@ document.getElementById(stage+'-save-status').style.display='none';
       var box=document.getElementById('kpfo-'+field);if(!box)return;
       var vals=this._optsFor(field),sel=this._f[field],html='';
       for(var i=0;i<vals.length;i++){var v=vals[i];
-        html+='<label><input type="checkbox" '+(sel.indexOf(v)>=0?'checked':'')+' onchange="KeyProjStats.toggleOpt(\''+field+'\',\''+escHtml(v)+'\',this.checked)"> '+escHtml(v)+'</label>';
+        html+='<label><input type="checkbox" '+(sel.indexOf(v)>=0?'checked':'')+' onchange="KeyProjStats.toggleOptIdx(\''+field+'\','+i+',this.checked)"> '+escHtml(v)+'</label>';
       }
       if(!vals.length)html='<div style="font-size:11px;color:#a0aec0">暂无可选值</div>';
       box.innerHTML=html;
