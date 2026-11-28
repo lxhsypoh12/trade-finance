@@ -2894,6 +2894,15 @@ document.getElementById(stage+'-save-status').style.display='none';
       }catch(e){this._rows=[];this._loadError=true}
     },
     kpMatch(r){return true},
+    // 进展/障碍编辑保存：恰三键 PATCH（字段值+进展更新时间+记录更新时间），缓存与时间格原地同步、不整表重渲染
+    async cellSave(id,field,value){
+      var now=new Date().toISOString();
+      var upd={};upd[field]=value;upd.progress_updated_at=now;upd.updated_at=now;
+      try{await sbUpdate(id,upd)}catch(e){}
+      for(var i=0;i<this._rows.length;i++){if(String(this._rows[i].id)===String(id)){this._rows[i][field]=value;this._rows[i].progress_updated_at=now;break}}
+      var pe=document.getElementById('kput-'+id);
+      if(pe){pe.textContent=kpFmtTime(now);pe.style.color=''}
+    },
     async render(){
       await this.load();
       var err=document.getElementById('kp-error');
@@ -2923,9 +2932,9 @@ document.getElementById(stage+'-save-status').style.display='none';
         }
         var row='<tr>';
         for(var j=0;j<tds.length;j++)row+='<td><span class="readonly-cell">'+escHtml(tds[j]==null?'':tds[j])+'</span></td>';
-        row+='<td><span class="readonly-cell">'+escHtml(r.progress||'')+'</span></td>';
-        row+='<td><span class="readonly-cell">'+escHtml(r.obstacle||'')+'</span></td>';
-        row+='<td><span class="readonly-cell"'+(r.progress_updated_at?'':' style="color:#a0aec0"')+'>'+(r.progress_updated_at?kpFmtTime(r.progress_updated_at):'尚未更新')+'</span></td>';
+        row+='<td><textarea rows="2" style="width:170px;font-size:11px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px" onblur="KeyProjStats.cellSave(\''+escHtml(r.id)+'\',\'progress\',this.value)">'+escHtml(r.progress||'')+'</textarea></td>';
+        row+='<td><textarea rows="2" style="width:140px;font-size:11px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:4px" onblur="KeyProjStats.cellSave(\''+escHtml(r.id)+'\',\'obstacle\',this.value)">'+escHtml(r.obstacle||'')+'</textarea></td>';
+        row+='<td><span class="readonly-cell" id="kput-'+escHtml(r.id)+'"'+(r.progress_updated_at?'':' style="color:#a0aec0"')+'>'+(r.progress_updated_at?kpFmtTime(r.progress_updated_at):'尚未更新')+'</span></td>';
         html+=row+'</tr>';
       }
       tb.innerHTML=html;
