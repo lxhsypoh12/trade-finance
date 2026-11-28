@@ -92,6 +92,9 @@
   .home-card.card-stats-finance { border-top-color: #6b46c1; }
   .home-card.card-errorlog { border-top-color: #c53030; }
   .home-card.card-guide { border-top-color: #319795; }
+  .home-card.card-keyproj { border-top-color: #d53f8c; }
+  .kp-sec-title { margin: 20px 0 8px; font-size: 15px; color: #1e3a5f; }
+  #kp-error { background: #fff5f5; color: #c53030; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
   .home-card.card-invoice { border-top-color: #b7791f; }
   .home-card .icon { font-size: 48px; margin-bottom: 16px; }
   .home-card h2 { font-size: 18px; color: #2d3748; margin-bottom: 8px; }
@@ -262,6 +265,7 @@
       <div class="home-card card-stats-subsidiary" onclick="showView('stats-subsidiary')"><div class="icon">🏢</div><h2>贸易子公司统计</h2><p>公司信息 / 注册资本 / 社保 / 发票额度</p></div>
       <div class="home-card card-errorlog" onclick="showView('errorlog')"><div class="icon">⚠️</div><h2>错误总结日志</h2><p>历史错误记录 / 后果 / 解决方案</p></div>
       <div class="home-card card-guide" onclick="showView('guide')"><div class="icon">📖</div><h2>业务模式指南</h2><p>业务全流程图 / 环节注意事项</p></div>
+      <div class="home-card card-keyproj" onclick="showView('stats-keyproj')"><div class="icon">🎯</div><h2>重点项目进度看板</h2><p>三阶段重点项目 · 进展/障碍周更 · 关键词筛选</p></div>
     </div>
   </div>
   <div class="home-section-header">
@@ -477,6 +481,20 @@
 </div>
 
 <!-- ====== 视图：贷款业务统计表 ====== -->
+<!-- ====== 视图：重点项目进度看板 ====== -->
+<div id="view-stats-keyproj" style="display:none">
+  <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>🎯 重点项目进度看板</h1><p>三阶段统计表勾选「纳入重点项目看板」自动汇入 · 进展/障碍由经办随时更新 · 每周五更新、例会展示</p></div></div>
+  <div class="stats-container">
+    <div class="stats-toolbar" id="kp-toolbar"></div>
+    <div id="kp-error" style="display:none"></div>
+    <h3 class="kp-sec-title">📝 投标重点项目（<span id="kp-bid-count">0</span> 条）</h3>
+    <div class="stats-table-wrapper"><table class="stats-table" id="kp-bid-table"><thead><tr><th>项目名称</th><th>区域</th><th>城投公司</th><th>业务类型</th><th>业务规模(万元)</th><th>投标时间</th><th>负责人</th><th>项目进展</th><th>障碍</th><th>进展最后更新</th></tr></thead><tbody id="kp-bid-tbody"></tbody></table></div>
+    <h3 class="kp-sec-title">🏆 中标重点项目（<span id="kp-win-count">0</span> 条）</h3>
+    <div class="stats-table-wrapper"><table class="stats-table" id="kp-win-table"><thead><tr><th>项目名称</th><th>区域</th><th>城投公司</th><th>业务规模(万元)</th><th>业务类型</th><th>中标时间</th><th>负责人</th><th>贸易方</th><th>项目进展</th><th>障碍</th><th>进展最后更新</th></tr></thead><tbody id="kp-win-tbody"></tbody></table></div>
+    <h3 class="kp-sec-title">✅ 完成重点项目（<span id="kp-done-count">0</span> 条）</h3>
+    <div class="stats-table-wrapper"><table class="stats-table" id="kp-done-table"><thead><tr><th>项目名称</th><th>区域</th><th>城投公司</th><th>业务规模(万元)</th><th>业务类型</th><th>完成时间</th><th>负责人</th><th>贸易方</th><th>实际利润(万元)</th><th>收入合计(万元)</th><th>支出合计(万元)</th><th>待回款金额(万元)</th><th>项目进展</th><th>障碍</th><th>进展最后更新</th></tr></thead><tbody id="kp-done-tbody"></tbody></table></div>
+  </div>
+</div>
 <div id="view-stats-loan" style="display:none">
   <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>💰 贸易子公司贷款类业务统计</h1><p>Supabase 云端 · 到期颜色预警 · 飞书日报自动提醒</p></div></div>
   <div class="stats-container">
@@ -737,7 +755,7 @@
   function fmtPct(v){return v.toFixed(3)+'%';}
 
   window.showView=function(view){
-    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done'),loan:document.getElementById('view-stats-loan'),subsidiary:document.getElementById('view-stats-subsidiary'),finance:document.getElementById('view-stats-finance'),errorlog:document.getElementById('view-errorlog'),guide:document.getElementById('view-guide'),guideDetail:document.getElementById('view-guide-detail'),invoice:document.getElementById('view-invoice')};
+    const els={home:document.getElementById('view-home'),calc:document.getElementById('view-calc'),quote:document.getElementById('view-quote'),bid:document.getElementById('view-stats-bid'),win:document.getElementById('view-stats-win'),done:document.getElementById('view-stats-done'),loan:document.getElementById('view-stats-loan'),subsidiary:document.getElementById('view-stats-subsidiary'),finance:document.getElementById('view-stats-finance'),errorlog:document.getElementById('view-errorlog'),guide:document.getElementById('view-guide'),guideDetail:document.getElementById('view-guide-detail'),invoice:document.getElementById('view-invoice'),keyproj:document.getElementById('view-stats-keyproj')};
     Object.values(els).forEach(function(e){if(e)e.style.display='none';});
     if(view==='home'){saveInputs(currentCalcType);els.home.style.display='block';}
     else if(view==='bill'||view==='lc'){saveInputs(currentCalcType);currentCalcType=view;applyLabels(view);restoreInputs(view);els.calc.style.display='block';recalc();}
@@ -752,6 +770,7 @@
     else if(view==='guide'){if(els.guide){els.guide.style.display='block';Guide.renderList();}}
     else if(view==='guide-detail'){if(els.guideDetail){els.guideDetail.style.display='block';Guide.renderDetail();}}
     else if(view==='invoice'){if(els.invoice){els.invoice.style.display='block';InvoiceStats.render();}}
+    else if(view==='stats-keyproj'){if(els.keyproj){els.keyproj.style.display='block';KeyProjStats.render();}}
   };
 
   function saveInputs(type){var s={};allInputs.forEach(function(el){s[el.id]=el.value;});inputState[type]=s;}
@@ -2861,6 +2880,58 @@ document.getElementById(stage+'-save-status').style.display='none';
     }
   };
 
+  // ===== 重点项目进度看板（2026-11-28 用户拍板：三区块上下排、勾选随记录走、进展更新时间列）=====
+  var KP_SECS=[['bid',10],['win',11],['done',15]];
+  function kpFmtTime(v){var d=new Date(v);if(isNaN(d.getTime()))return'';var p=function(x){return String(x).padStart(2,'0')};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())}
+  var KeyProjStats={
+    _rows:[],_loadError:false,
+    _f:{region:[],company:[],biz_type:[],person:[],trader:[]},
+    async load(){
+      try{
+        var res=await fetch(SB_API+'?select=*&key_project=eq.true',{headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}});
+        var data=await res.json();
+        if(Array.isArray(data)){this._rows=data;this._loadError=false}else{this._rows=[];this._loadError=true}
+      }catch(e){this._rows=[];this._loadError=true}
+    },
+    kpMatch(r){return true},
+    async render(){
+      await this.load();
+      var err=document.getElementById('kp-error');
+      if(this._loadError){
+        if(err){err.textContent='看板字段尚未添加到数据库，请先在 Supabase 执行加列 SQL（见部署说明）';err.style.display='block'}
+        for(var s=0;s<KP_SECS.length;s++){var tb0=document.getElementById('kp-'+KP_SECS[s][0]+'-tbody');if(tb0)tb0.innerHTML='';var c0=document.getElementById('kp-'+KP_SECS[s][0]+'-count');if(c0)c0.textContent='0'}
+        return;
+      }
+      if(err)err.style.display='none';
+      var rows=this._rows.filter(this.kpMatch.bind(this));
+      for(var i=0;i<KP_SECS.length;i++){this._renderSec(KP_SECS[i][0],KP_SECS[i][1],rows.filter(function(st){return function(r){return r.stage===st}}(KP_SECS[i][0])))}
+    },
+    _renderSec(stage,nCols,list){
+      list=list.slice().sort(function(a,b){return doneTimeVal(b)-doneTimeVal(a)});
+      var cnt=document.getElementById('kp-'+stage+'-count');if(cnt)cnt.textContent=list.length;
+      var tb=document.getElementById('kp-'+stage+'-tbody');if(!tb)return;
+      if(!list.length){tb.innerHTML='<tr><td colspan="'+nCols+'" class="empty-hint">暂无重点项目，请在对应阶段统计表勾选「纳入重点项目看板」</td></tr>';return}
+      var html='';
+      for(var i=0;i<list.length;i++){var r=list[i];var tds=[];
+        if(stage==='bid'){tds=[r.project_name,r.region,r.company,r.biz_type,r.amount,r.time,r.person]}
+        else if(stage==='win'){tds=[r.project_name,r.region,r.company,r.amount,r.biz_type,r.time,r.person,r.trader]}
+        else{
+          var d=parseDetail(r),iS=0,eS=0,k;
+          if(d){for(k in(d.income||{}))iS+=parseFloat(d.income[k])||0;for(k in(d.expense||{}))eS+=parseFloat(d.expense[k])||0}
+          else{iS=parseFloat(r.actual_revenue||0)||0;eS=parseFloat(r.actual_cost||0)||0}
+          tds=[r.project_name,r.region,r.company,r.amount,r.biz_type,r.time,r.person,r.trader,effProfit(r).toFixed(2),iS.toFixed(2),eS.toFixed(2),pendingReceive(r).toFixed(2)];
+        }
+        var row='<tr>';
+        for(var j=0;j<tds.length;j++)row+='<td><span class="readonly-cell">'+escHtml(tds[j]==null?'':tds[j])+'</span></td>';
+        row+='<td><span class="readonly-cell">'+escHtml(r.progress||'')+'</span></td>';
+        row+='<td><span class="readonly-cell">'+escHtml(r.obstacle||'')+'</span></td>';
+        row+='<td><span class="readonly-cell"'+(r.progress_updated_at?'':' style="color:#a0aec0"')+'>'+(r.progress_updated_at?kpFmtTime(r.progress_updated_at):'尚未更新')+'</span></td>';
+        html+=row+'</tr>';
+      }
+      tb.innerHTML=html;
+    }
+  };
+
   window.Stats = Stats;
   window.LoanStats = LoanStats;
   window.SubsidiaryStats = SubsidiaryStats;
@@ -2871,6 +2942,7 @@ document.getElementById(stage+'-save-status').style.display='none';
   window.InvoiceStats = InvoiceStats;
   window.autoProjectName = autoProjectName;
   window.pendingReceive = pendingReceive;
+  window.KeyProjStats = KeyProjStats;
   if(qElType)qElType.addEventListener('change',recalcQuote);
   applyLabels('bill');
   showView('home');
