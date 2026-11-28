@@ -456,14 +456,14 @@
 <div id="view-stats-bid" style="display:none">
   <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>📝 投标阶段业务统计表</h1><p>Supabase 云端 · 多人共享 · 实时同步</p></div></div>
   <div class="stats-container"><div class="stats-toolbar"><div class="toolbar-left"><span style="color:#718096;font-size:13px" id="bid-info"></span><span class="auto-save-indicator" id="bid-save-status">已同步</span></div><button class="btn-action btn-add" onclick="Stats.addBid()">＋ 添加记录</button></div>
-    <div class="stats-table-wrapper"><table class="stats-table" id="bid-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('bid',this)"></th><th>项目名称<br><span style="font-weight:400;font-size:10px;color:#a0aec0">(系统自动生成)</span></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>时间<br>(年/月)</th><th>负责人</th><th style="width:90px">操作</th></tr></thead><tbody id="bid-tbody"></tbody></table></div>
+    <div class="stats-table-wrapper"><table class="stats-table" id="bid-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('bid',this)"></th><th>项目名称<br><span style="font-weight:400;font-size:10px;color:#a0aec0">(系统自动生成)</span></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>投标时间<br>(年/月)</th><th>负责人</th><th style="width:90px">操作</th></tr></thead><tbody id="bid-tbody"></tbody></table></div>
     <div class="stats-actions"><button class="btn-action btn-danger" onclick="Stats.batchDelete('bid')">🗑 删除选中</button><button class="btn-action btn-success" onclick="Stats.migrateBidToWin()">🏆 迁移至中标阶段</button><button class="btn-action btn-primary" onclick="Stats.exportPDF('bid')">📥 导出PDF</button><button class="btn-excel" onclick="Stats.exportExcel('bid')">📊 导出Excel</button></div>
   </div>
 </div>
 <div id="view-stats-win" style="display:none">
   <div class="header"><span class="back-link" onclick="showView('home')">← 返回主页</span><div class="header-text"><h1>🏆 中标阶段业务统计表</h1><p>Supabase 云端 · 多人共享 · 实时同步</p></div></div>
   <div class="stats-container"><div class="stats-toolbar"><div class="toolbar-left"><span style="color:#718096;font-size:13px" id="win-info"></span><span class="auto-save-indicator" id="win-save-status">已同步</span></div></div>
-    <div class="stats-table-wrapper"><table class="stats-table" id="win-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('win',this)"></th><th>项目名称<br><span style="font-weight:400;font-size:10px;color:#a0aec0">(系统自动生成)</span></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>时间<br>(年/月)</th><th>负责人</th><th>贸易方</th><th>贸易成本<br>(万元)</th><th>中标费率<br>(%)</th><th>中标金额<br>(万元)</th><th>预计利润<br>(万元)</th></tr></thead><tbody id="win-tbody"></tbody></table></div>
+    <div class="stats-table-wrapper"><table class="stats-table" id="win-table"><thead><tr><th class="col-cb"><input type="checkbox" onchange="Stats.toggleAll('win',this)"></th><th>项目名称<br><span style="font-weight:400;font-size:10px;color:#a0aec0">(系统自动生成)</span></th><th>区域</th><th>城投公司</th><th>金融机构</th><th>业务规模<br>(万元)</th><th>业务类型</th><th>中标时间<br>(年/月)</th><th>负责人</th><th>贸易方</th><th>贸易成本<br>(万元)</th><th>中标费率<br>(%)</th><th>中标金额<br>(万元)</th><th>预计利润<br>(万元)</th></tr></thead><tbody id="win-tbody"></tbody></table></div>
     <div class="stats-actions"><button class="btn-action btn-danger" onclick="Stats.batchDelete('win')">🗑 删除选中</button><button class="btn-action btn-success" onclick="Stats.migrateWinToDone()">✅ 迁移至完成阶段</button><button class="btn-action btn-primary" onclick="Stats.exportPDF('win')">📥 导出PDF</button><button class="btn-excel" onclick="Stats.exportExcel('win')">📊 导出Excel</button></div>
   </div>
 </div>
@@ -932,8 +932,8 @@ document.getElementById(stage+'-save-status').style.display='none';
     exportExcel(stage){
       var names={bid:'投标阶段业务统计表',win:'中标阶段业务统计表',done:'完成阶段业务统计表'};
       var cols={
-        bid:['项目名称','区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人'],
-        win:['项目名称','区域','城投公司','金融机构','业务规模(万元)','业务类型','时间','负责人','贸易方','贸易成本(万元)','中标费率(%)','中标金额(万元)','预计利润(万元)'],
+        bid:['项目名称','区域','城投公司','金融机构','业务规模(万元)','业务类型','投标时间','负责人'],
+        win:['项目名称','区域','城投公司','金融机构','业务规模(万元)','业务类型','中标时间','负责人','贸易方','贸易成本(万元)','中标费率(%)','中标金额(万元)','预计利润(万元)'],
         done:['项目名称','区域','城投公司','金融机构','业务规模(万元)','业务类型','完成时间(年/月)','负责人(经理-助理)','业务板块','贸易方','实际利润(万元)','归档状态','归档日期','计入利润']
       };
       var data=this._cache[stage]||[];
